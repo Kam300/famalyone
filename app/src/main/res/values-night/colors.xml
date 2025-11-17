@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark Theme Specific Colors -->
+    <!-- Мягкие темные оттенки вместо яркого белого -->
+    <color name="card_background_light">#1E1E2D</color>
+    <color name="card_background_gray">#16161F</color>
+    <color name="surface_light">#16161F</color>
+    <color name="gray_card">#1E1E2D</color>
+    <color name="dialog_background_purple">#252535</color>
+    
+    <!-- Цвета для полей ввода -->
+    <color name="input_background_dark">#1E1E2D</color>
+    <color name="input_stroke_dark">#2D2D40</color>
+    
+    <!-- Цвета для диалогов -->
+    <color name="dialog_background_dark">#1E1E2D</color>
+    <color name="dialog_surface_dark">#252535</color>
+    <color name="text_primary_light">#dcdce5</color>
+</resources>

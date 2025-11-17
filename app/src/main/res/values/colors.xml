@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Modern Color Palette -->
+    <!-- Primary Colors - Warm Orange Gradient -->
+    <color name="primary_orange">#FF6B35</color>
+    <color name="primary_orange_light">#FF8C61</color>
+    <color name="primary_orange_dark">#E85A2A</color>
+    <color name="primary_gradient_start">#FF6B35</color>
+    <color name="primary_gradient_end">#F7931E</color>
+    
+    <!-- Secondary Colors - Deep Purple -->
+    <color name="purple_button">#6C63FF</color>
+    <color name="purple_button_dark">#5A52D5</color>
+    <color name="purple_button_light">#8B84FF</color>
+    <color name="purple_gradient_start">#6C63FF</color>
+    <color name="purple_gradient_end">#8B84FF</color>
+    
+    <!-- Accent Colors -->
+    <color name="red_button">#FF5252</color>
+    <color name="red_button_dark">#E04848</color>
+    <color name="green_accent">#00D9A3</color>
+    <color name="green_accent_dark">#00B88A</color>
+    <color name="blue_accent">#4A90E2</color>
+    
+    <!-- Card & Surface Colors -->
+    <color name="card_background_light">#FFFFFF</color>
+    <color name="card_background_gray">#F5F7FA</color>
+    <color name="surface_light">#FAFBFC</color>
+    <color name="gray_card">#F5F7FA</color> <!-- Legacy support for tree views -->
+    <color name="dialog_background_purple">#E8E4FF</color> <!-- Light purple for dialogs -->
+    
+    <!-- Text Colors - Light Theme -->
+    <color name="text_primary_light">#1A1A2E</color>
+    <color name="text_secondary_light">#6B7280</color>
+    <color name="text_tertiary_light">#9CA3AF</color>
+    <color name="text_on_orange">#FFFFFF</color>
+    <color name="text_on_purple">#FFFFFF</color>
+    
+    <!-- Dark Theme Colors -->
+    <color name="background_dark">#0F0F1E</color>
+    <color name="surface_dark">#1A1A2E</color>
+    <color name="card_dark">#252538</color>
+    <color name="text_primary_dark">#FFFFFF</color>
+    <color name="text_secondary_dark">#B8B8D1</color>
+    <color name="text_tertiary_dark">#8B8B9E</color>
+    
+    <!-- Common Colors -->
+    <color name="black">#000000</color>
+    <color name="white">#FFFFFF</color>
+    <color name="transparent">#00000000</color>
+    <color name="divider">#E5E7EB</color>
+    <color name="divider_dark">#374151</color>
+    
+    <!-- Shadow & Overlay -->
+    <color name="shadow_light">#1A000000</color>
+    <color name="overlay_dark">#80000000</color>
+    
+    <!-- Launcher Icon -->
+    <color name="ic_launcher_background_custom">#FF6B35</color>
+</resources>

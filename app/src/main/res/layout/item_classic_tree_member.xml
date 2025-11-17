@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Классический вид члена древа (круглое фото + имя) -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="100dp"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="8dp">
+
+    <!-- Круглое фото с градиентной рамкой -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="84dp"
+        android:layout_height="84dp"
+        app:cardCornerRadius="42dp"
+        app:cardElevation="6dp"
+        app:cardBackgroundColor="@color/purple_button">
+
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/ivClassicMemberPhoto"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_margin="2dp"
+            android:scaleType="centerCrop"
+            android:background="@color/primary_orange" />
+
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Имя -->
+    <TextView
+        android:id="@+id/tvClassicMemberName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="Имя"
+        android:textColor="@color/white"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:maxLines="2"
+        android:ellipsize="end" />
+
+</LinearLayout>
+
