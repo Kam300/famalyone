@@ -130,12 +130,12 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/select_gender"
-                    android:textSize="15sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/text_primary_light"
+                    android:layout_marginBottom="8dp"
                     android:fontFamily="sans-serif-medium"
-                    android:layout_marginBottom="8dp" />
+                    android:text="@string/select_gender"
+                    android:textColor="@color/text_primary_light"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilGender"
@@ -156,12 +156,12 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/birth_date"
-                    android:textSize="15sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/text_primary_light"
+                    android:layout_marginBottom="8dp"
                     android:fontFamily="sans-serif-medium"
-                    android:layout_marginBottom="8dp" />
+                    android:text="@string/birth_date"
+                    android:textColor="@color/text_primary_light"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilBirthDate"
@@ -169,16 +169,16 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="12dp"
-                    app:errorEnabled="true"
+                    app:endIconDrawable="@android:drawable/ic_menu_my_calendar"
                     app:endIconMode="custom"
-                    app:endIconDrawable="@android:drawable/ic_menu_my_calendar">
+                    app:errorEnabled="true">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etBirthDate"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:focusable="false"
                         android:clickable="true"
+                        android:focusable="false"
                         android:hint="16.10.2025"
                         android:inputType="none" />
                 </com.google.android.material.textfield.TextInputLayout>
@@ -187,12 +187,12 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/select_role"
-                    android:textSize="15sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/text_primary_light"
+                    android:layout_marginBottom="8dp"
                     android:fontFamily="sans-serif-medium"
-                    android:layout_marginBottom="8dp" />
+                    android:text="@string/select_role"
+                    android:textColor="@color/text_primary_light"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilRole"
@@ -217,8 +217,8 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="16dp"
                     android:hint="@string/phone_number"
-                    app:helperText="@string/phone_optional"
-                    app:errorEnabled="true">
+                    app:errorEnabled="true"
+                    app:helperText="@string/phone_optional">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etPhoneNumber"
@@ -232,12 +232,12 @@
                     android:id="@+id/tvWeddingDateLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
+                    android:fontFamily="sans-serif-medium"
                     android:text="@string/wedding_date"
+                    android:textColor="@color/text_primary_light"
                     android:textSize="15sp"
                     android:textStyle="bold"
-                    android:textColor="@color/text_primary_light"
-                    android:fontFamily="sans-serif-medium"
-                    android:layout_marginBottom="8dp"
                     android:visibility="gone" />
 
                 <com.google.android.material.textfield.TextInputLayout
@@ -246,18 +246,18 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="12dp"
-                    app:errorEnabled="true"
-                    app:endIconMode="custom"
+                    android:visibility="gone"
                     app:endIconDrawable="@android:drawable/ic_menu_my_calendar"
-                    app:helperText="@string/wedding_date_optional"
-                    android:visibility="gone">
+                    app:endIconMode="custom"
+                    app:errorEnabled="true"
+                    app:helperText="@string/wedding_date_optional">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etWeddingDate"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:focusable="false"
                         android:clickable="true"
+                        android:focusable="false"
                         android:hint="16.10.2025"
                         android:inputType="none" />
                 </com.google.android.material.textfield.TextInputLayout>
@@ -266,12 +266,12 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Связи (необязательно):"
-                    android:textSize="15sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/text_primary_light"
+                    android:layout_marginBottom="8dp"
                     android:fontFamily="sans-serif-medium"
-                    android:layout_marginBottom="8dp" />
+                    android:text="Связи (необязательно):"
+                    android:textColor="@color/text_primary_light"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnSelectFather"

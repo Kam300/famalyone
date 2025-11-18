@@ -69,5 +69,23 @@ class FamilyViewModel(application: Application) : AndroidViewModel(application) 
             onComplete(members)
         }
     }
+    
+    // Photo methods
+    private val photoDao = FamilyDatabase.getDatabase(application).memberPhotoDao()
+    
+    fun getPhotosForMember(memberId: Long) = photoDao.getPhotosForMember(memberId)
+    
+    fun insertPhoto(photo: com.example.familyone.data.MemberPhoto, onComplete: () -> Unit = {}) {
+        viewModelScope.launch {
+            photoDao.insertPhoto(photo)
+            onComplete()
+        }
+    }
+    
+    fun deletePhoto(photo: com.example.familyone.data.MemberPhoto, onComplete: () -> Unit = {}) {
+        viewModelScope.launch {
+            photoDao.deletePhoto(photo)
+            onComplete()
+        }
+    }
 }
-

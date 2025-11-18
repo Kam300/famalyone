@@ -46,7 +46,12 @@ class MemberListActivity : AppCompatActivity() {
             onContactClick = { member ->
                 showContactOptions(member)
             },
-            allMembers = { viewModel.allMembers.value ?: emptyList() }
+            allMembers = { viewModel.allMembers.value ?: emptyList() },
+            onMemberClick = { member ->
+                val intent = Intent(this, MemberProfileActivity::class.java)
+                intent.putExtra("MEMBER_ID", member.id)
+                startActivity(intent)
+            }
         )
         
         binding.rvMembers.layoutManager = LinearLayoutManager(this)

@@ -111,9 +111,20 @@
             style="@style/PurpleButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp"
+            android:layout_marginBottom="16dp"
             android:text="@string/tutorial"
             app:icon="@android:drawable/ic_menu_help"
+            app:iconGravity="start" />
+
+        <!-- Photo Gallery Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnPhotoGallery"
+            style="@style/PurpleButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp"
+            android:text="@string/photo_gallery"
+            app:icon="@android:drawable/ic_menu_gallery"
             app:iconGravity="start" />
 
         <!-- Developer -->

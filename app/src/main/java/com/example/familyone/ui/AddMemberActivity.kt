@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.MediaStore
 import android.view.View
 import android.widget.ArrayAdapter
 import androidx.activity.result.contract.ActivityResultContracts
@@ -22,6 +23,7 @@ import com.example.familyone.databinding.ActivityAddMemberBinding
 import com.example.familyone.utils.toast
 import com.example.familyone.utils.toLocalizedString
 import com.example.familyone.viewmodel.FamilyViewModel
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -297,12 +299,22 @@ class AddMemberActivity : AppCompatActivity() {
             viewModel.updateMember(member) {
                 runOnUiThread {
                     showSuccessDialog(member, true)
+                    // Регистрируем лицо на сервере если есть фото
+                    selectedPhotoUri?.let { uri ->
+                        registerFaceOnServer(member, uri)
+                    }
                 }
             }
         } else {
-            viewModel.insertMember(member) {
+            viewModel.insertMember(member) { insertedId ->
                 runOnUiThread {
-                    showSuccessDialog(member, false)
+                    // Обновляем ID члена семьи после вставки
+                    val memberWithId = member.copy(id = insertedId)
+                    showSuccessDialog(memberWithId, false)
+                    // Регистрируем лицо на сервере если есть фото
+                    selectedPhotoUri?.let { uri ->
+                        registerFaceOnServer(memberWithId, uri)
+                    }
                 }
             }
         }
@@ -472,5 +484,44 @@ class AddMemberActivity : AppCompatActivity() {
             }
             .show()
     }
-}
 
+
+    
+    private fun registerFaceOnServer(member: FamilyMember, photoUri: Uri) {
+        android.util.Log.d("AddMember", "📸 Регистрируем лицо для: ${member.firstName} ${member.lastName} (ID: ${member.id})")
+        
+        // Инициализируем URL сервера из настроек
+        val prefs = getSharedPreferences("app_settings", MODE_PRIVATE)
+        val serverUrl = prefs.getString("face_server_url", "http://10.0.2.2:5000") ?: "http://10.0.2.2:5000"
+        com.example.familyone.api.FaceRecognitionApi.setServerUrl(serverUrl)
+        
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            try {
+                val bitmap = MediaStore.Images.Media.getBitmap(contentResolver, photoUri)
+                android.util.Log.d("AddMember", "✓ Bitmap загружен: ${bitmap.width}x${bitmap.height}")
+                
+                val result = com.example.familyone.api.FaceRecognitionApi.registerFace(
+                    member.id,
+                    "${member.firstName} ${member.lastName}",
+                    bitmap
+                )
+                
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    result.onSuccess { message ->
+                        android.util.Log.d("AddMember", "✅ Лицо зарегистрировано: $message")
+                        toast("✓ Лицо зарегистрировано для распознавания")
+                    }
+                    result.onFailure { error ->
+                        android.util.Log.e("AddMember", "❌ Ошибка регистрации: ${error.message}", error)
+                        toast("⚠️ Ошибка регистрации лица: ${error.message}")
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("AddMember", "❌ Исключение при регистрации", e)
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    toast("⚠️ Ошибка: ${e.message}")
+                }
+            }
+        }
+    }
+}

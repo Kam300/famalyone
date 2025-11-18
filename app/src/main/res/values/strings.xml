@@ -6,6 +6,7 @@
     <string name="add_member">Добавить Члена Семьи</string>
     <string name="view_list">Посмотреть Список</string>
     <string name="family_tree">Древо семьи</string>
+    <string name="photo_gallery">Галерея с AI</string>
     <string name="export_data">Экспорт Данных</string>
     <string name="settings">Настройки</string>
     <string name="about">О приложении</string>
@@ -139,4 +140,16 @@
     <string name="wedding_reminders">Напоминания о годовщинах</string>
     <string name="reminder_days_before">За сколько дней напоминать</string>
     <string name="notification_time">Время уведомлений</string>
+    
+    <!-- Updates -->
+    <string name="update_available">Доступно обновление</string>
+    <string name="update_download">Загрузить обновление</string>
+    <string name="update_install">Установить</string>
+    <string name="update_later">Позже</string>
+    <string name="update_checking">Проверка обновлений...</string>
+    <string name="update_no_updates">У вас последняя версия</string>
+    <string name="update_error">Ошибка проверки обновлений</string>
+    <string name="update_downloaded">Обновление загружено</string>
+    <string name="current_version">Текущая версия: %s</string>
+    <string name="latest_version">Последняя версия: %s</string>
 </resources>

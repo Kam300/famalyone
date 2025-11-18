@@ -18,7 +18,8 @@ class MemberAdapter(
     private val onEditClick: (FamilyMember) -> Unit,
     private val onDeleteClick: (FamilyMember) -> Unit,
     private val onContactClick: (FamilyMember) -> Unit,
-    private val allMembers: () -> List<FamilyMember>
+    private val allMembers: () -> List<FamilyMember>,
+    private val onMemberClick: ((FamilyMember) -> Unit)? = null
 ) : ListAdapter<FamilyMember, MemberAdapter.MemberViewHolder>(DiffCallback()) {
     
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MemberViewHolder {
@@ -106,6 +107,11 @@ class MemberAdapter(
             
             binding.btnDelete.setOnClickListener {
                 onDeleteClick(member)
+            }
+            
+            // Клик по карточке открывает профиль
+            binding.root.setOnClickListener {
+                onMemberClick?.invoke(member)
             }
         }
         

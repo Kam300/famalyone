@@ -7,7 +7,7 @@
     android:paddingEnd="24dp"
     android:paddingTop="20dp"
     android:paddingBottom="16dp"
-    android:textColor="#2D2D3A"
+    android:textColor="?android:attr/textColorPrimary"
     android:textSize="20sp"
     android:textStyle="bold"
     android:fontFamily="sans-serif-medium"

@@ -15,5 +15,9 @@
     <!-- Цвета для диалогов -->
     <color name="dialog_background_dark">#1E1E2D</color>
     <color name="dialog_surface_dark">#252535</color>
-    <color name="text_primary_light">#dcdce5</color>
+    <color name="text_primary_light">#E8E8F0</color>
+    <color name="text_secondary_light">#B8B8D1</color>
+    
+    <!-- Улучшенная контрастность для темной темы -->
+    <color name="divider">#2D2D40</color>
 </resources>
