@@ -481,7 +481,9 @@ class PhotoGalleryActivity : AppCompatActivity() {
             .setMessage("Прикрепить это фото к ${result.memberName}?")
             .setPositiveButton("Да") { _, _ ->
                 selectedBitmap?.let { bitmap ->
-                    savePhotoToMember(result.memberId.toLong(), result.memberName, bitmap)
+                    // Конвертируем серверный ID обратно в локальный
+                    val localMemberId = com.example.familyone.utils.UniqueIdHelper.fromServerId(result.memberId.toLong())
+                    savePhotoToMember(localMemberId, result.memberName, bitmap)
                 }
             }
             .setNegativeButton("Нет", null)
@@ -507,8 +509,10 @@ class PhotoGalleryActivity : AppCompatActivity() {
                         
                         results.forEachIndexed { index, result ->
                             if (checkedItems[index]) {
+                                // Конвертируем серверный ID обратно в локальный
+                                val localMemberId = com.example.familyone.utils.UniqueIdHelper.fromServerId(result.memberId.toLong())
                                 val wasSaved = savePhotoToMemberWithResult(
-                                    result.memberId.toLong(), 
+                                    localMemberId, 
                                     result.memberName, 
                                     bitmap
                                 )
@@ -703,11 +707,11 @@ class PhotoGalleryActivity : AppCompatActivity() {
     
     private fun showServerSettingsDialog() {
         val prefs = getSharedPreferences("app_settings", MODE_PRIVATE)
-        val currentUrl = prefs.getString("face_server_url", "http://10.0.2.2:5000") ?: "http://10.0.2.2:5000"
+        val currentUrl = prefs.getString("face_server_url", "http://192.168.1.178:5000") ?: "http://192.168.1.178:5000"
         
         val input = android.widget.EditText(this)
         input.setText(currentUrl)
-        input.hint = "http://192.168.1.100:5000"
+        input.hint = "http://192.168.1.178:5000"
         
         MaterialAlertDialogBuilder(this)
             .setTitle("Настройки сервера")
@@ -724,7 +728,7 @@ class PhotoGalleryActivity : AppCompatActivity() {
             }
             .setNegativeButton("Отмена", null)
             .setNeutralButton("По умолчанию") { _, _ ->
-                val defaultUrl = "http://127.0.0.1:5000"
+                val defaultUrl = "http://192.168.1.178:5000"
                 prefs.edit().putString("face_server_url", defaultUrl).apply()
                 FaceRecognitionApi.setServerUrl(defaultUrl)
                 toast("Установлен URL по умолчанию")

@@ -23,6 +23,7 @@ import com.example.familyone.databinding.ActivityAddMemberBinding
 import com.example.familyone.utils.toast
 import com.example.familyone.utils.toLocalizedString
 import com.example.familyone.viewmodel.FamilyViewModel
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -495,13 +496,17 @@ class AddMemberActivity : AppCompatActivity() {
         val serverUrl = prefs.getString("face_server_url", "http://10.0.2.2:5000") ?: "http://10.0.2.2:5000"
         com.example.familyone.api.FaceRecognitionApi.setServerUrl(serverUrl)
         
+        // Создаем уникальный ID для сервера (device_id + member_id)
+        val uniqueServerId = getUniqueServerId(member.id)
+        android.util.Log.d("AddMember", "🔑 Уникальный ID для сервера: $uniqueServerId")
+        
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
             try {
                 val bitmap = MediaStore.Images.Media.getBitmap(contentResolver, photoUri)
                 android.util.Log.d("AddMember", "✓ Bitmap загружен: ${bitmap.width}x${bitmap.height}")
                 
                 val result = com.example.familyone.api.FaceRecognitionApi.registerFace(
-                    member.id,
+                    uniqueServerId,
                     "${member.firstName} ${member.lastName}",
                     bitmap
                 )
@@ -513,7 +518,7 @@ class AddMemberActivity : AppCompatActivity() {
                     }
                     result.onFailure { error ->
                         android.util.Log.e("AddMember", "❌ Ошибка регистрации: ${error.message}", error)
-                        toast("⚠️ Ошибка регистрации лица: ${error.message}")
+                        showPhotoErrorDialog(error.message ?: "Неизвестная ошибка")
                     }
                 }
             } catch (e: Exception) {
@@ -523,5 +528,36 @@ class AddMemberActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+
+    
+    private fun getUniqueServerId(memberId: Long): Long {
+        return com.example.familyone.utils.UniqueIdHelper.toServerId(this, memberId)
+    }
+    
+    private fun showPhotoErrorDialog(errorMessage: String) {
+        val message = when {
+            errorMessage.contains("несколько лиц", ignoreCase = true) -> 
+                "На выбранном фото обнаружено несколько лиц.\n\nДля регистрации в системе распознавания используйте фото с одним человеком."
+            errorMessage.contains("не найдено лиц", ignoreCase = true) || errorMessage.contains("no faces", ignoreCase = true) ->
+                "На выбранном фото не обнаружено лиц.\n\nПопробуйте выбрать другое фото с четким изображением лица."
+            else ->
+                "Не удалось зарегистрировать лицо для распознавания.\n\n$errorMessage"
+        }
+        
+        MaterialAlertDialogBuilder(this)
+            .setTitle("⚠️ Ошибка регистрации лица")
+            .setMessage(message)
+            .setPositiveButton("Выбрать другое фото") { _, _ ->
+                // Открываем выбор фото заново
+                checkPermissionAndPickImage()
+            }
+            .setNegativeButton("Пропустить") { dialog, _ ->
+                dialog.dismiss()
+                toast("Член семьи сохранен без регистрации лица")
+            }
+            .setCancelable(false)
+            .show()
     }
 }

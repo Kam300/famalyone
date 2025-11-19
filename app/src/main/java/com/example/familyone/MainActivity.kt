@@ -27,6 +27,14 @@ class MainActivity : AppCompatActivity() {
         installSplashScreen()
         
         super.onCreate(savedInstanceState)
+        
+        // Проверяем первый запуск
+        if (isFirstLaunch()) {
+            startActivity(Intent(this, OnboardingActivity::class.java))
+            finish()
+            return
+        }
+        
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         
@@ -36,6 +44,11 @@ class MainActivity : AppCompatActivity() {
         scheduleNotificationWorker()
         
         setupClickListeners()
+    }
+    
+    private fun isFirstLaunch(): Boolean {
+        val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
+        return !prefs.getBoolean("onboarding_completed", false)
     }
     
     private fun requestNotificationPermission() {
