@@ -63,6 +63,23 @@ class FamilyViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
     
+    // Синхронные методы для импорта
+    suspend fun getAllMembersSync(): List<FamilyMember> {
+        return repository.getAllMembersSync()
+    }
+    
+    suspend fun insertMemberSync(member: FamilyMember): Long {
+        return repository.insertMember(member)
+    }
+    
+    suspend fun updateMemberParents(memberId: Long, fatherId: Long?, motherId: Long?) {
+        val member = repository.getMemberById(memberId)
+        member?.let {
+            val updated = it.copy(fatherId = fatherId, motherId = motherId)
+            repository.updateMember(updated)
+        }
+    }
+    
     fun getMembersByRole(role: FamilyRole, onComplete: (List<FamilyMember>) -> Unit) {
         viewModelScope.launch {
             val members = repository.getMembersByRole(role)
