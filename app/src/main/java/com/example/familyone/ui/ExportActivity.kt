@@ -170,29 +170,32 @@ class ExportActivity : AppCompatActivity() {
     }
     
     private fun exportToPdf(members: List<FamilyMember>, format: PdfPageFormat) {
-        try {
-            if (members.isEmpty()) {
-                toast("Нет членов семьи для экспорта")
-                return
-            }
-            
-            // Показать прогресс
-            toast("Создание PDF...")
-            
-            // Генерация PDF
-            val pdfFile = PdfExporter.exportFamilyTree(this, members, format)
-            
-            if (pdfFile != null && pdfFile.exists()) {
-                toast(getString(R.string.export_success))
+        if (members.isEmpty()) {
+            toast("Нет членов семьи для экспорта")
+            return
+        }
+        
+        // Показать прогресс
+        toast("Создание PDF...")
+        
+        // Получаем URL сервера из настроек
+        val prefs = getSharedPreferences("app_settings", MODE_PRIVATE)
+        val serverUrl = prefs.getString("pdf_server_url", null)
+        
+        lifecycleScope.launch {
+            try {
+                val pdfFile = PdfExporter.exportFamilyTree(this@ExportActivity, members, format, serverUrl)
                 
-                // Предложить открыть PDF
-                showOpenPdfDialog(pdfFile)
-            } else {
-                toast(getString(R.string.export_error))
+                if (pdfFile != null && pdfFile.exists()) {
+                    toast(getString(R.string.export_success))
+                    showOpenPdfDialog(pdfFile)
+                } else {
+                    toast(getString(R.string.export_error))
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                toast(getString(R.string.export_error) + ": ${e.message}")
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            toast(getString(R.string.export_error) + ": ${e.message}")
         }
     }
     
@@ -251,9 +254,9 @@ class ExportActivity : AppCompatActivity() {
     
     private fun saveToFile(fileName: String, content: String): File {
         val exportDir = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            File(getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "FamilyTree")
+            File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "FamilyTree")
         } else {
-            File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "FamilyTree")
+            File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "FamilyTree")
         }
         
         if (!exportDir.exists()) {

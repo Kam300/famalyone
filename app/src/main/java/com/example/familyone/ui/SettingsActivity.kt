@@ -53,6 +53,16 @@ class SettingsActivity : AppCompatActivity() {
         binding.btnSetNotificationTime.setOnClickListener {
             showTimePickerDialog()
         }
+        
+        // Загружаем сохранённый URL сервера
+        val savedUrl = notificationPrefs.getString("pdf_server_url", "")
+        binding.etPdfServerUrl.setText(savedUrl)
+        
+        binding.btnSaveServerUrl.setOnClickListener {
+            val url = binding.etPdfServerUrl.text.toString().trim()
+            notificationPrefs.edit().putString("pdf_server_url", url).apply()
+            toast("URL сервера сохранён")
+        }
     }
     
     private fun setupNotificationListeners() {

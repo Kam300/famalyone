@@ -64,9 +64,6 @@ dependencies {
     
     // Gson
     implementation(libs.gson)
-
-    // PDF generation
-    implementation("com.itextpdf:itext7-core:7.2.5")
     
     // Splash Screen
     implementation("androidx.core:core-splashscreen:1.0.1")
