@@ -64,17 +64,20 @@
                     android:layout_height="120dp"
                     android:scaleType="centerCrop"
 
-                    android:src="@mipmap/ic_launcher"
+                    android:src="@drawable/icon"
                     android:layout_marginBottom="16dp"/>
 
                 <TextView
                     android:id="@+id/tvName"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Имя Фамилия"
-                    android:textSize="24sp"
+                    android:textSize="20sp"
                     android:textStyle="bold"
-                    android:textColor="@color/text_primary_light"/>
+                    android:textColor="@color/text_primary_light"
+                    android:gravity="center"
+                    android:maxLines="2"
+                    android:ellipsize="end"/>
 
                 <TextView
                     android:id="@+id/tvPatronymic"
@@ -201,9 +204,10 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="📸 Галерея"
-                        android:textSize="18sp"
+                        android:textSize="16sp"
                         android:textStyle="bold"
-                        android:textColor="@color/text_primary_light"/>
+                        android:textColor="@color/text_primary_light"
+                        android:maxLines="1"/>
 
                     <TextView
                         android:id="@+id/tvPhotoCount"

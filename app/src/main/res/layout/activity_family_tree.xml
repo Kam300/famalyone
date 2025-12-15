@@ -59,13 +59,15 @@
 
     <!-- Title -->
     <TextView
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:text="@string/tree_title"
         android:textColor="?attr/colorOnPrimary"
-        android:textSize="24sp"
+        android:textSize="20sp"
         android:textStyle="bold"
+        android:gravity="center"
+        android:maxLines="1"
         android:layout_marginBottom="16dp" />
 
     <!-- Tree ScrollView -->

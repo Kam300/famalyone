@@ -36,13 +36,14 @@
             <!-- Title -->
             <TextView
                 android:id="@+id/tvTitle"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Добро пожаловать!"
-                android:textSize="28sp"
+                android:textSize="22sp"
                 android:textStyle="bold"
                 android:textColor="@color/text_primary_light"
                 android:gravity="center"
+                android:maxLines="2"
                 android:layout_marginBottom="16dp"/>
 
             <!-- Description -->

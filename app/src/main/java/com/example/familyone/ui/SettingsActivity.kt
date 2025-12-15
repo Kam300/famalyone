@@ -2,26 +2,23 @@ package com.example.familyone.ui
 
 import android.app.TimePickerDialog
 import android.content.Context
-import android.net.Uri
+
 import android.os.Bundle
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.lifecycleScope
+
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.familyone.R
 import com.example.familyone.databinding.ActivitySettingsBinding
-import com.example.familyone.utils.DataImportExport
+
 import com.example.familyone.utils.ThemePreferences
 import com.example.familyone.utils.toast
-import com.example.familyone.viewmodel.FamilyViewModel
+
 import com.example.familyone.workers.NotificationWorker
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+
 import java.util.concurrent.TimeUnit
 
 class SettingsActivity : AppCompatActivity() {
@@ -29,19 +26,6 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var binding: ActivitySettingsBinding
     private lateinit var themePrefs: ThemePreferences
     private lateinit var notificationPrefs: android.content.SharedPreferences
-    private lateinit var viewModel: FamilyViewModel
-    
-    private val importLauncher = registerForActivityResult(
-        androidx.activity.result.contract.ActivityResultContracts.GetContent()
-    ) { uri ->
-        uri?.let { importData(it) }
-    }
-    
-    private val exportLauncher = registerForActivityResult(
-        androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/json")
-    ) { uri ->
-        uri?.let { exportData(it) }
-    }
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,7 +34,6 @@ class SettingsActivity : AppCompatActivity() {
         
         themePrefs = ThemePreferences(this)
         notificationPrefs = getSharedPreferences("app_settings", Context.MODE_PRIVATE)
-        viewModel = ViewModelProvider(this)[FamilyViewModel::class.java]
         
         updateCurrentThemeText()
         loadNotificationSettings()
@@ -69,14 +52,6 @@ class SettingsActivity : AppCompatActivity() {
         
         binding.btnSetNotificationTime.setOnClickListener {
             showTimePickerDialog()
-        }
-        
-        binding.btnImportData.setOnClickListener {
-            importLauncher.launch("application/json")
-        }
-        
-        binding.btnExportData.setOnClickListener {
-            exportLauncher.launch("family_data_${System.currentTimeMillis()}.json")
         }
     }
     
@@ -212,205 +187,6 @@ class SettingsActivity : AppCompatActivity() {
             else -> getString(R.string.system_theme)
         }
         
-        binding.tvCurrentTheme.text = "Текущая тема: $currentThemeName"
-    }
-
-
-
-    
-    private fun importData(uri: Uri) {
-        lifecycleScope.launch {
-            try {
-                val result = withContext(Dispatchers.IO) {
-                    DataImportExport.importFromJson(this@SettingsActivity, uri)
-                }
-                
-                result.onSuccess { importMembers ->
-                    if (importMembers.isEmpty()) {
-                        toast("Файл не содержит данных")
-                        return@onSuccess
-                    }
-                    
-                    android.util.Log.d("Import", "Starting import of ${importMembers.size} members")
-                    importMembers.forEach { member ->
-                        android.util.Log.d("Import", "Member: ${member.firstName} ${member.lastName}, ID: ${member.id}, Father: ${member.fatherId}, Mother: ${member.motherId}")
-                    }
-                    
-                    // Получаем существующих членов семьи ОДИН РАЗ
-                    val existingMembers = withContext(Dispatchers.IO) {
-                        viewModel.getAllMembersSync()
-                    }
-                    
-                    var addedCount = 0
-                    var skippedCount = 0
-                    val duplicates = mutableListOf<String>()
-                    
-                    // Карта для сопоставления старых ID с новыми
-                    val idMapping = mutableMapOf<Long, Long>()
-                    
-                    // ШАГ 1: Добавляем всех членов БЕЗ связей
-                    importMembers.forEach { member ->
-                        val isDuplicate = existingMembers.any { existing ->
-                            existing.firstName == member.firstName &&
-                            existing.lastName == member.lastName &&
-                            existing.birthDate == member.birthDate
-                        }
-                        
-                        if (isDuplicate) {
-                            skippedCount++
-                            duplicates.add("${member.firstName} ${member.lastName}")
-                        } else {
-                            // Сохраняем старый ID
-                            val oldId = member.id
-                            
-                            // Добавляем члена БЕЗ связей
-                            val memberWithoutLinks = member.copy(
-                                id = 0, // Auto-generate
-                                fatherId = null,
-                                motherId = null
-                            )
-                            
-                            // Вставляем и получаем новый ID
-                            val newId = withContext(Dispatchers.IO) {
-                                viewModel.insertMemberSync(memberWithoutLinks)
-                            }
-                            
-                            // Сохраняем маппинг старого ID на новый
-                            idMapping[oldId] = newId
-                            android.util.Log.d("Import", "Mapped: old ID $oldId -> new ID $newId (${member.firstName} ${member.lastName})")
-                            addedCount++
-                        }
-                    }
-                    
-                    android.util.Log.d("Import", "ID Mapping complete: ${idMapping.size} entries")
-                    
-                    // ШАГ 2: Обновляем связи с родителями
-                    var linksUpdated = 0
-                    var linksFailed = 0
-                    
-                    importMembers.forEach { member ->
-                        val isDuplicate = existingMembers.any { existing ->
-                            existing.firstName == member.firstName &&
-                            existing.lastName == member.lastName &&
-                            existing.birthDate == member.birthDate
-                        }
-                        
-                        if (!isDuplicate && (member.fatherId != null || member.motherId != null)) {
-                            val newId = idMapping[member.id]
-                            
-                            // Проверяем, есть ли родители в маппинге
-                            val newFatherId = member.fatherId?.let { oldFatherId ->
-                                idMapping[oldFatherId] ?: run {
-                                    // Родитель не найден в импортируемых данных
-                                    android.util.Log.w("Import", "Father ID $oldFatherId not found for ${member.firstName} ${member.lastName}")
-                                    null
-                                }
-                            }
-                            
-                            val newMotherId = member.motherId?.let { oldMotherId ->
-                                idMapping[oldMotherId] ?: run {
-                                    // Родитель не найден в импортируемых данных
-                                    android.util.Log.w("Import", "Mother ID $oldMotherId not found for ${member.firstName} ${member.lastName}")
-                                    null
-                                }
-                            }
-                            
-                            if (newId != null && (newFatherId != null || newMotherId != null)) {
-                                withContext(Dispatchers.IO) {
-                                    viewModel.updateMemberParents(newId, newFatherId, newMotherId)
-                                }
-                                linksUpdated++
-                            } else if (newId != null) {
-                                linksFailed++
-                            }
-                        }
-                    }
-                    
-                    android.util.Log.d("Import", "Links updated: $linksUpdated, failed: $linksFailed")
-                    
-                    // Формируем сообщение о результате
-                    val message = buildString {
-                        append("Добавлено: $addedCount\n")
-                        append("Связей восстановлено: $linksUpdated\n")
-                        if (linksFailed > 0) {
-                            append("⚠️ Связей не восстановлено: $linksFailed\n")
-                            append("(родители отсутствуют в файле)\n")
-                        }
-                        if (skippedCount > 0) {
-                            append("\nПропущено дубликатов: $skippedCount\n")
-                            if (duplicates.size <= 5) {
-                                append("\nДубликаты:\n")
-                                duplicates.forEach { append("• $it\n") }
-                            } else {
-                                append("\nДубликаты:\n")
-                                duplicates.take(5).forEach { append("• $it\n") }
-                                append("...и ещё ${duplicates.size - 5}")
-                            }
-                        }
-                    }
-                    
-                    toast("Импорт завершён: добавлено $addedCount")
-                    
-                    // Показываем диалог с результатом ОДИН РАЗ
-                    AlertDialog.Builder(this@SettingsActivity)
-                        .setTitle("Импорт завершён")
-                        .setMessage(message)
-                        .setPositiveButton("OK", null)
-                        .show()
-                        
-                }.onFailure { error ->
-                    toast("Ошибка импорта: ${error.message}")
-                    
-                    AlertDialog.Builder(this@SettingsActivity)
-                        .setTitle("Ошибка импорта")
-                        .setMessage("Не удалось импортировать данные:\n${error.message}")
-                        .setPositiveButton("OK", null)
-                        .show()
-                }
-            } catch (e: Exception) {
-                toast("Ошибка: ${e.message}")
-            }
-        }
-    }
-    
-    private fun exportData(uri: Uri) {
-        lifecycleScope.launch {
-            try {
-                // Получаем членов семьи ОДИН РАЗ синхронно
-                val members = withContext(Dispatchers.IO) {
-                    viewModel.getAllMembersSync()
-                }
-                
-                if (members.isEmpty()) {
-                    toast("Нет данных для экспорта")
-                    return@launch
-                }
-                
-                withContext(Dispatchers.IO) {
-                    val jsonString = DataImportExport.exportToJson(members)
-                    
-                    contentResolver.openOutputStream(uri)?.use { outputStream ->
-                        outputStream.write(jsonString.toByteArray())
-                    }
-                }
-                
-                toast("Экспортировано ${members.size} членов семьи")
-                
-                AlertDialog.Builder(this@SettingsActivity)
-                    .setTitle("Экспорт завершён")
-                    .setMessage("Успешно экспортировано ${members.size} членов семьи")
-                    .setPositiveButton("OK", null)
-                    .show()
-                    
-            } catch (e: Exception) {
-                toast("Ошибка экспорта: ${e.message}")
-                
-                AlertDialog.Builder(this@SettingsActivity)
-                    .setTitle("Ошибка экспорта")
-                    .setMessage("Не удалось экспортировать данные:\n${e.message}")
-                    .setPositiveButton("OK", null)
-                    .show()
-            }
-        }
+        binding.tvCurrentTheme.text = currentThemeName
     }
 }

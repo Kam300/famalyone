@@ -28,26 +28,30 @@
 
         <!-- Title -->
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:layout_marginTop="32dp"
+            android:layout_marginTop="24dp"
             android:text="@string/about_title"
             android:textColor="?attr/colorOnPrimary"
-            android:textSize="28sp"
+            android:textSize="22sp"
             android:textStyle="bold"
-            android:layout_marginBottom="16dp" />
+            android:gravity="center"
+            android:maxLines="1"
+            android:layout_marginBottom="12dp" />
 
         <!-- App Name -->
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:text="@string/app_name"
             android:textColor="@color/green_accent"
-            android:textSize="24sp"
+            android:textSize="20sp"
             android:textStyle="bold"
-            android:layout_marginBottom="24dp" />
+            android:gravity="center"
+            android:maxLines="1"
+            android:layout_marginBottom="20dp" />
 
         <!-- Description Card -->
         <com.google.android.material.card.MaterialCardView

@@ -11,10 +11,20 @@
         </shape>
     </item>
     
+    <!-- White circle background -->
+    <item
+        android:width="130dp"
+        android:height="130dp"
+        android:gravity="center">
+        <shape android:shape="oval">
+            <solid android:color="@color/white" />
+        </shape>
+    </item>
+    
     <!-- Logo -->
     <item
         android:width="120dp"
         android:height="120dp"
-        android:drawable="@drawable/ic_family_tree"
+        android:drawable="@drawable/icon"
         android:gravity="center" />
 </layer-list>

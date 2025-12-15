@@ -57,4 +57,10 @@
     
     <!-- Launcher Icon -->
     <color name="ic_launcher_background_custom">#FF6B35</color>
+    <color name="ic_launcher_background_icon">#FFFFFF</color>
+    
+    <!-- Icon Colors -->
+    <color name="purple_primary">#6C63FF</color>
+    <color name="purple_secondary">#8B84FF</color>
+    <color name="purple_light">#B8B4FF</color>
 </resources>

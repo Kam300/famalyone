@@ -3,6 +3,7 @@ package com.example.familyone.ui
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
@@ -12,15 +13,20 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import com.example.familyone.R
 import com.example.familyone.data.FamilyMember
 import com.example.familyone.databinding.ActivityExportBinding
+import com.example.familyone.utils.DataImportExport
 import com.example.familyone.utils.PdfExporter
 import com.example.familyone.utils.PdfPageFormat
 import com.example.familyone.utils.toast
 import com.example.familyone.viewmodel.FamilyViewModel
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileWriter
 import java.text.SimpleDateFormat
@@ -42,6 +48,12 @@ class ExportActivity : AppCompatActivity() {
         }
     }
     
+    private val importLauncher = registerForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let { importData(it) }
+    }
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityExportBinding.inflate(layoutInflater)
@@ -55,6 +67,10 @@ class ExportActivity : AppCompatActivity() {
     private fun setupClickListeners() {
         binding.btnBack.setOnClickListener {
             finish()
+        }
+        
+        binding.btnImportJson.setOnClickListener {
+            importLauncher.launch("application/json")
         }
         
         binding.btnExportJson.setOnClickListener {
@@ -254,6 +270,104 @@ class ExportActivity : AppCompatActivity() {
     
     private fun getTimestamp(): String {
         return SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+    }
+    
+    private fun importData(uri: Uri) {
+        lifecycleScope.launch {
+            try {
+                val result = withContext(Dispatchers.IO) {
+                    DataImportExport.importFromJson(this@ExportActivity, uri)
+                }
+                
+                result.onSuccess { importMembers ->
+                    if (importMembers.isEmpty()) {
+                        toast("Файл не содержит данных")
+                        return@onSuccess
+                    }
+                    
+                    val existingMembers = withContext(Dispatchers.IO) {
+                        viewModel.getAllMembersSync()
+                    }
+                    
+                    var addedCount = 0
+                    var skippedCount = 0
+                    val duplicates = mutableListOf<String>()
+                    val idMapping = mutableMapOf<Long, Long>()
+                    
+                    // Добавляем членов БЕЗ связей
+                    importMembers.forEach { member ->
+                        val isDuplicate = existingMembers.any { existing ->
+                            existing.firstName == member.firstName &&
+                            existing.lastName == member.lastName &&
+                            existing.birthDate == member.birthDate
+                        }
+                        
+                        if (isDuplicate) {
+                            skippedCount++
+                            duplicates.add("${member.firstName} ${member.lastName}")
+                        } else {
+                            val oldId = member.id
+                            val memberWithoutLinks = member.copy(
+                                id = 0,
+                                fatherId = null,
+                                motherId = null
+                            )
+                            
+                            val newId = withContext(Dispatchers.IO) {
+                                viewModel.insertMemberSync(memberWithoutLinks)
+                            }
+                            
+                            idMapping[oldId] = newId
+                            addedCount++
+                        }
+                    }
+                    
+                    // Обновляем связи
+                    var linksUpdated = 0
+                    importMembers.forEach { member ->
+                        val isDuplicate = existingMembers.any { existing ->
+                            existing.firstName == member.firstName &&
+                            existing.lastName == member.lastName &&
+                            existing.birthDate == member.birthDate
+                        }
+                        
+                        if (!isDuplicate && (member.fatherId != null || member.motherId != null)) {
+                            val newId = idMapping[member.id]
+                            val newFatherId = member.fatherId?.let { idMapping[it] }
+                            val newMotherId = member.motherId?.let { idMapping[it] }
+                            
+                            if (newId != null && (newFatherId != null || newMotherId != null)) {
+                                withContext(Dispatchers.IO) {
+                                    viewModel.updateMemberParents(newId, newFatherId, newMotherId)
+                                }
+                                linksUpdated++
+                            }
+                        }
+                    }
+                    
+                    val message = buildString {
+                        append("Добавлено: $addedCount\n")
+                        append("Связей восстановлено: $linksUpdated")
+                        if (skippedCount > 0) {
+                            append("\nПропущено дубликатов: $skippedCount")
+                        }
+                    }
+                    
+                    toast("Импорт завершён")
+                    
+                    AlertDialog.Builder(this@ExportActivity)
+                        .setTitle("Импорт завершён")
+                        .setMessage(message)
+                        .setPositiveButton("OK", null)
+                        .show()
+                        
+                }.onFailure { error ->
+                    toast("Ошибка импорта: ${error.message}")
+                }
+            } catch (e: Exception) {
+                toast("Ошибка: ${e.message}")
+            }
+        }
     }
 }
 

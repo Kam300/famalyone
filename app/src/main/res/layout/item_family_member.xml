@@ -49,22 +49,24 @@
 
                 <TextView
                     android:id="@+id/tvMemberName"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Гарипов"
                     android:textColor="@color/text_primary_light"
-                    android:textSize="22sp"
+                    android:textSize="18sp"
                     android:textStyle="bold"
                     android:fontFamily="sans-serif-medium"
-                    android:letterSpacing="0.01"/>
+                    android:letterSpacing="0.01"
+                    android:maxLines="1"
+                    android:ellipsize="end"/>
 
                 <TextView
                     android:id="@+id/tvMemberDetails"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Раис Раисович"
                     android:textColor="@color/text_secondary_light"
-                    android:textSize="16sp"
+                    android:textSize="14sp"
                     android:layout_marginTop="4dp"
                     android:maxLines="2"
                     android:ellipsize="end"/>
