@@ -1,61 +1,78 @@
 <?xml version="1.0" encoding="utf-8"?>
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="140dp"
+    android:layout_width="120dp"
     android:layout_height="wrap_content"
-    android:layout_margin="8dp"
-    app:cardCornerRadius="20dp"
-    app:cardElevation="6dp"
-    app:cardBackgroundColor="?attr/colorSurface">
+    android:layout_margin="6dp"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="4dp"
+    app:strokeWidth="0dp"
+    app:cardBackgroundColor="@color/white">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="12dp"
+        android:padding="10dp"
         android:gravity="center">
 
-        <!-- Photo with gradient border -->
-        <FrameLayout
+        <!-- Role badge -->
+        <TextView
+            android:id="@+id/tvTreeMemberRole"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content">
+            android:layout_height="wrap_content"
+            android:text="Дедушка"
+            android:textColor="@color/white"
+            android:textSize="9sp"
+            android:textStyle="bold"
+            android:background="@drawable/badge_role"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="2dp"
+            android:layout_marginBottom="6dp" />
 
-            <com.google.android.material.imageview.ShapeableImageView
+        <!-- Photo with border -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            app:cardCornerRadius="30dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="3dp"
+            app:strokeColor="@color/purple_button">
+
+            <ImageView
                 android:id="@+id/ivTreeMemberPhoto"
-                android:layout_width="80dp"
-                android:layout_height="80dp"
-                android:scaleType="centerCrop"
-                android:background="@drawable/gradient_purple"
-                android:padding="2dp"
-                app:shapeAppearanceOverlay="@style/RoundedImageView" />
-        </FrameLayout>
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop" />
+
+        </com.google.android.material.card.MaterialCardView>
 
         <!-- Name -->
         <TextView
             android:id="@+id/tvTreeMemberName"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Гарипов"
+            android:layout_marginTop="6dp"
+            android:text="Иванов Иван"
             android:textColor="@color/text_primary_light"
-            android:textSize="13sp"
+            android:textSize="11sp"
             android:textStyle="bold"
             android:fontFamily="sans-serif-medium"
             android:gravity="center"
             android:maxLines="2"
             android:ellipsize="end" />
 
-        <!-- Details -->
+        <!-- Birth date -->
         <TextView
             android:id="@+id/tvTreeMemberDetails"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="Раис\nРаисович"
+            android:layout_marginTop="2dp"
+            android:text="01.01.1950"
             android:textColor="@color/text_secondary_light"
-            android:textSize="11sp"
+            android:textSize="9sp"
             android:gravity="center"
-            android:maxLines="3"
+            android:maxLines="1"
             android:ellipsize="end" />
 
     </LinearLayout>

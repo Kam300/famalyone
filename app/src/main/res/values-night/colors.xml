@@ -20,4 +20,8 @@
     
     <!-- Улучшенная контрастность для темной темы -->
     <color name="divider">#2D2D40</color>
+    
+    <!-- Цвета для поиска -->
+    <color name="gray_text">#8B8B9E</color>
+    <color name="dark_text">#E8E8F0</color>
 </resources>

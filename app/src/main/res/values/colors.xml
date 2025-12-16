@@ -35,6 +35,8 @@
     <color name="text_tertiary_light">#9CA3AF</color>
     <color name="text_on_orange">#FFFFFF</color>
     <color name="text_on_purple">#FFFFFF</color>
+    <color name="gray_text">#9CA3AF</color>
+    <color name="dark_text">#1A1A2E</color>
     
     <!-- Dark Theme Colors -->
     <color name="background_dark">#0F0F1E</color>

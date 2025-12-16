@@ -108,41 +108,211 @@ class FamilyTreeActivity : AppCompatActivity() {
         
         if (members.isEmpty()) return
         
-        // Создаем карту членов семьи по ID
-        val membersMap = members.associateBy { it.id }
-        
-        // Находим корневых членов (без родителей)
-        val rootMembers = members.filter { it.fatherId == null && it.motherId == null }
-        
-        // Находим пары
-        val couples = findCouples(members)
-        
-        // Если есть корневые члены, строим от них
-        if (rootMembers.isNotEmpty()) {
-            buildFromRoots(rootMembers, couples, membersMap, members)
-        } else {
-            // Если нет корневых, показываем всех членов как отдельные ветки
-            val scrollView = createHorizontalScrollLayout()
-            val innerLayout = scrollView.getChildAt(0) as LinearLayout
-            
-            couples.forEach { couple ->
-                val familyBranch = buildFamilyBranch(couple, members, mutableSetOf(), 0)
-                innerLayout.addView(familyBranch)
-                
-                if (couple != couples.last()) {
-                    innerLayout.addView(createBranchSeparator())
-                }
+        // Простая визуализация по поколениям (ролям)
+        buildSimpleGenerationTree(members)
+    }
+    
+    private fun buildSimpleGenerationTree(members: List<FamilyMember>) {
+        // Группируем по поколениям на основе ролей
+        val generations = mapOf(
+            "Бабушки и Дедушки" to members.filter { 
+                it.role == FamilyRole.GRANDFATHER || it.role == FamilyRole.GRANDMOTHER 
+            },
+            "Родители" to members.filter { 
+                it.role == FamilyRole.FATHER || it.role == FamilyRole.MOTHER 
+            },
+            "Дяди и Тёти" to members.filter { 
+                it.role == FamilyRole.UNCLE || it.role == FamilyRole.AUNT 
+            },
+            "Дети" to members.filter { 
+                it.role == FamilyRole.SON || it.role == FamilyRole.DAUGHTER ||
+                it.role == FamilyRole.BROTHER || it.role == FamilyRole.SISTER
+            },
+            "Внуки" to members.filter { 
+                it.role == FamilyRole.GRANDSON || it.role == FamilyRole.GRANDDAUGHTER 
+            },
+            "Другие" to members.filter { 
+                it.role == FamilyRole.OTHER 
             }
-            
-            // Добавляем одиночных членов
-            val membersInCouples = couples.flatMap { listOf(it.person1, it.person2) }.toSet()
-            val singles = members.filter { it !in membersInCouples }
-            singles.forEach { member ->
-                innerLayout.addView(createMemberCard(member))
-            }
-            
-            binding.llTreeContainer.addView(scrollView)
+        )
+        
+        val mainContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = android.view.Gravity.CENTER_HORIZONTAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            setPadding(16, 16, 16, 16)
         }
+        
+        var isFirstGeneration = true
+        
+        generations.forEach { (genName, genMembers) ->
+            if (genMembers.isNotEmpty()) {
+                // Линия связи между поколениями с разветвлением
+                if (!isFirstGeneration) {
+                    // Контейнер для линий
+                    val connectionContainer = LinearLayout(this).apply {
+                        orientation = LinearLayout.VERTICAL
+                        gravity = android.view.Gravity.CENTER_HORIZONTAL
+                        layoutParams = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                        )
+                    }
+                    
+                    // Вертикальная линия вниз
+                    val verticalLine1 = View(this).apply {
+                        layoutParams = LinearLayout.LayoutParams(4, 25).apply {
+                            gravity = android.view.Gravity.CENTER_HORIZONTAL
+                        }
+                        setBackgroundColor(getColor(R.color.purple_button))
+                    }
+                    connectionContainer.addView(verticalLine1)
+                    
+                    // Горизонтальная линия разветвления
+                    val horizontalLine = View(this).apply {
+                        layoutParams = LinearLayout.LayoutParams(150, 4).apply {
+                            gravity = android.view.Gravity.CENTER_HORIZONTAL
+                        }
+                        setBackgroundColor(getColor(R.color.purple_button))
+                    }
+                    connectionContainer.addView(horizontalLine)
+                    
+                    // Вертикальная линия вниз к детям
+                    val verticalLine2 = View(this).apply {
+                        layoutParams = LinearLayout.LayoutParams(4, 25).apply {
+                            gravity = android.view.Gravity.CENTER_HORIZONTAL
+                        }
+                        setBackgroundColor(getColor(R.color.purple_button))
+                    }
+                    connectionContainer.addView(verticalLine2)
+                    
+                    mainContainer.addView(connectionContainer)
+                }
+                
+                // Метка поколения
+                val genLabel = android.widget.TextView(this).apply {
+                    text = genName
+                    textSize = 14f
+                    setTextColor(getColor(android.R.color.white))
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                    gravity = android.view.Gravity.CENTER
+                    setBackgroundResource(R.drawable.badge_role)
+                    setPadding(24, 8, 24, 8)
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        setMargins(0, 8, 0, 12)
+                    }
+                }
+                mainContainer.addView(genLabel)
+                
+                // Горизонтальный скролл для карточек
+                val scrollView = android.widget.HorizontalScrollView(this).apply {
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    )
+                    isHorizontalScrollBarEnabled = false
+                }
+                
+                val cardsContainer = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = android.view.Gravity.CENTER
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    )
+                }
+                
+                // Роли супружеских пар (показываем сердечко)
+                val marriedMaleRoles = listOf(FamilyRole.GRANDFATHER, FamilyRole.FATHER)
+                val marriedFemaleRoles = listOf(FamilyRole.GRANDMOTHER, FamilyRole.MOTHER)
+                
+                // Роли детей (без сердечка)
+                val childMaleRoles = listOf(FamilyRole.SON, FamilyRole.BROTHER, FamilyRole.GRANDSON, FamilyRole.NEPHEW)
+                val childFemaleRoles = listOf(FamilyRole.DAUGHTER, FamilyRole.SISTER, FamilyRole.GRANDDAUGHTER, FamilyRole.NIECE)
+                
+                // Проверяем, это поколение супругов или детей
+                val isMarriedGeneration = genName in listOf("Бабушки и Дедушки", "Родители", "Дяди и Тёти")
+                
+                if (isMarriedGeneration) {
+                    // Для супружеских пар - группируем и показываем сердечко
+                    val maleRoles = marriedMaleRoles + listOf(FamilyRole.UNCLE)
+                    val femaleRoles = marriedFemaleRoles + listOf(FamilyRole.AUNT)
+                    
+                    val males = genMembers.filter { it.role in maleRoles }.toMutableList()
+                    val females = genMembers.filter { it.role in femaleRoles }.toMutableList()
+                    
+                    // Создаём пары
+                    while (males.isNotEmpty() || females.isNotEmpty()) {
+                        val male = males.removeFirstOrNull()
+                        val female = females.removeFirstOrNull()
+                        
+                        val pairContainer = LinearLayout(this).apply {
+                            orientation = LinearLayout.HORIZONTAL
+                            gravity = android.view.Gravity.CENTER_VERTICAL
+                        }
+                        
+                        if (male != null) {
+                            pairContainer.addView(createMemberCard(male))
+                        }
+                        
+                        // Сердечко между супругами
+                        if (male != null && female != null) {
+                            val coupleLink = android.widget.TextView(this).apply {
+                                text = "❤"
+                                textSize = 16f
+                                setTextColor(getColor(R.color.red_button))
+                                gravity = android.view.Gravity.CENTER
+                                layoutParams = LinearLayout.LayoutParams(
+                                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                                    LinearLayout.LayoutParams.WRAP_CONTENT
+                                ).apply {
+                                    setMargins(-8, 0, -8, 0)
+                                }
+                            }
+                            pairContainer.addView(coupleLink)
+                        }
+                        
+                        if (female != null) {
+                            pairContainer.addView(createMemberCard(female))
+                        }
+                        
+                        cardsContainer.addView(pairContainer)
+                    }
+                } else {
+                    // Для детей/внуков - просто показываем карточки без сердечек
+                    genMembers.forEach { member ->
+                        cardsContainer.addView(createMemberCard(member))
+                    }
+                }
+                
+                // Добавляем остальных (OTHER)
+                val others = genMembers.filter { it.role == FamilyRole.OTHER }
+                others.forEach { member ->
+                    cardsContainer.addView(createMemberCard(member))
+                }
+                
+                scrollView.addView(cardsContainer)
+                mainContainer.addView(scrollView)
+                
+                isFirstGeneration = false
+            }
+        }
+        
+        // Добавляем в ScrollView для вертикальной прокрутки
+        val verticalScroll = android.widget.ScrollView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.MATCH_PARENT
+            )
+        }
+        verticalScroll.addView(mainContainer)
+        binding.llTreeContainer.addView(verticalScroll)
     }
     
     private fun buildFromRoots(
@@ -260,21 +430,15 @@ class FamilyTreeActivity : AppCompatActivity() {
         }
         
         if (children.isNotEmpty()) {
-            // Стрелка вниз
-            val arrow = android.widget.TextView(this).apply {
-                text = "↓"
-                textSize = 24f
-                setTextColor(getColor(android.R.color.white))
-                alpha = 0.7f
-                gravity = android.view.Gravity.CENTER
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    setMargins(0, 8, 0, 8)
+            // Вертикальная линия связи к детям
+            val verticalLine = View(this).apply {
+                layoutParams = LinearLayout.LayoutParams(3, 35).apply {
+                    gravity = android.view.Gravity.CENTER_HORIZONTAL
+                    setMargins(0, 6, 0, 6)
                 }
+                setBackgroundColor(getColor(R.color.purple_button))
             }
-            branchContainer.addView(arrow)
+            branchContainer.addView(verticalLine)
             
             // Контейнер для детей с меткой поколения
             val childrenWithLabelContainer = LinearLayout(this).apply {
@@ -386,31 +550,65 @@ class FamilyTreeActivity : AppCompatActivity() {
                 branchContainer.addView(childrenWithLabelContainer)
             }
             // Рекурсивно показываем пары с детьми
+            // Показываем пары С детьми (они будут родителями следующего поколения)
             if (childCouplesWithChildren.isNotEmpty()) {
-                val nextLevelArrow = android.widget.TextView(this).apply {
-                    text = "↓"
-                    textSize = 24f
-                    setTextColor(getColor(android.R.color.white))
-                    alpha = 0.7f
+                // Сначала показываем карточки этих пар
+                val couplesWithChildrenLayout = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
                     gravity = android.view.Gravity.CENTER
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                    ).apply {
-                        setMargins(0, 8, 0, 8)
-                    }
                 }
-                branchContainer.addView(nextLevelArrow)
                 
-                // Контейнер с меткой для следующего поколения
-                val nextGenContainer = LinearLayout(this).apply {
+                childCouplesWithChildren.forEach { couple ->
+                    val pairLayout = LinearLayout(this).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = android.view.Gravity.CENTER
+                    }
+                    
+                    pairLayout.addView(createMemberCard(couple.person1))
+                    
+                    val line = View(this).apply {
+                        layoutParams = LinearLayout.LayoutParams(30, 3).apply {
+                            setMargins(4, 0, 4, 0)
+                            gravity = android.view.Gravity.CENTER_VERTICAL
+                        }
+                        setBackgroundColor(getColor(R.color.purple_button))
+                    }
+                    pairLayout.addView(line)
+                    
+                    pairLayout.addView(createMemberCard(couple.person2))
+                    couplesWithChildrenLayout.addView(pairLayout)
+                    
+                    processed.add(couple.person1.id)
+                    processed.add(couple.person2.id)
+                }
+                
+                // Добавляем карточки пар с детьми в childrenLayout если он ещё не добавлен
+                if (childCouplesWithoutChildren.isEmpty() && singleChildren.isEmpty()) {
+                    childrenWithLabelContainer.addView(couplesWithChildrenLayout)
+                    branchContainer.addView(childrenWithLabelContainer)
+                } else {
+                    childrenLayout.addView(couplesWithChildrenLayout)
+                }
+                
+                // Линия к внукам
+                val nextLevelLine = View(this).apply {
+                    layoutParams = LinearLayout.LayoutParams(3, 35).apply {
+                        gravity = android.view.Gravity.CENTER_HORIZONTAL
+                        setMargins(0, 6, 0, 6)
+                    }
+                    setBackgroundColor(getColor(R.color.purple_button))
+                }
+                branchContainer.addView(nextLevelLine)
+                
+                // Контейнер для внуков
+                val grandchildrenContainer = LinearLayout(this).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = android.view.Gravity.CENTER_VERTICAL
                 }
                 
-                // Метка поколения
-                val nextGenLabel = android.widget.TextView(this).apply {
-                    text = getGenerationLabel(level + 1)
+                // Метка поколения внуков
+                val grandchildLabel = android.widget.TextView(this).apply {
+                    text = getGenerationLabel(level + 2)
                     textSize = 11f
                     setTextColor(getColor(android.R.color.white))
                     alpha = 0.6f
@@ -424,19 +622,29 @@ class FamilyTreeActivity : AppCompatActivity() {
                     rotation = -90f
                     setPadding(4, 4, 4, 4)
                 }
-                nextGenContainer.addView(nextGenLabel)
+                grandchildrenContainer.addView(grandchildLabel)
                 
-                val nextGenLayout = LinearLayout(this).apply {
+                val grandchildrenLayout = LinearLayout(this).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = android.view.Gravity.CENTER
                 }
                 
-                childCouplesWithChildren.forEach { childCouple ->
-                    nextGenLayout.addView(buildFamilyBranch(childCouple, allMembers, processed, level + 1))
+                // Показываем внуков (детей пар с детьми)
+                childCouplesWithChildren.forEach { parentCouple ->
+                    val grandchildren = allMembers.filter { gc ->
+                        gc.id !in processed &&
+                        ((gc.fatherId == parentCouple.person1.id && gc.motherId == parentCouple.person2.id) ||
+                         (gc.fatherId == parentCouple.person2.id && gc.motherId == parentCouple.person1.id))
+                    }
+                    
+                    grandchildren.forEach { grandchild ->
+                        grandchildrenLayout.addView(createMemberCard(grandchild))
+                        processed.add(grandchild.id)
+                    }
                 }
                 
-                nextGenContainer.addView(nextGenLayout)
-                branchContainer.addView(nextGenContainer)
+                grandchildrenContainer.addView(grandchildrenLayout)
+                branchContainer.addView(grandchildrenContainer)
             }
         }
         
@@ -494,21 +702,15 @@ class FamilyTreeActivity : AppCompatActivity() {
         }
         
         if (children.isNotEmpty()) {
-            // Стрелка вниз
-            val arrow = android.widget.TextView(this).apply {
-                text = "↓"
-                textSize = 24f
-                setTextColor(getColor(android.R.color.white))
-                alpha = 0.7f
-                gravity = android.view.Gravity.CENTER
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    setMargins(0, 8, 0, 8)
+            // Вертикальная линия связи к детям
+            val singleVerticalLine = View(this).apply {
+                layoutParams = LinearLayout.LayoutParams(3, 35).apply {
+                    gravity = android.view.Gravity.CENTER_HORIZONTAL
+                    setMargins(0, 6, 0, 6)
                 }
+                setBackgroundColor(getColor(R.color.purple_button))
             }
-            branchContainer.addView(arrow)
+            branchContainer.addView(singleVerticalLine)
             
             // Контейнер для детей с меткой
             val childrenWithLabelContainer = LinearLayout(this).apply {
@@ -965,8 +1167,14 @@ class FamilyTreeActivity : AppCompatActivity() {
     private fun createModernMemberCard(member: FamilyMember): View {
         val binding = ItemTreeMemberBinding.inflate(LayoutInflater.from(this))
         
-        binding.tvTreeMemberName.text = member.lastName
-        binding.tvTreeMemberDetails.text = "${member.firstName}\n${member.patronymic}"
+        // Роль
+        binding.tvTreeMemberRole.text = member.role.toLocalizedString(this)
+        
+        // Имя и фамилия
+        binding.tvTreeMemberName.text = "${member.lastName} ${member.firstName}"
+        
+        // Дата рождения
+        binding.tvTreeMemberDetails.text = member.birthDate ?: ""
         
         // Load photo
         if (!member.photoUri.isNullOrEmpty()) {

@@ -39,28 +39,43 @@ CARD_BORDER = (180/255, 160/255, 220/255)
 WHITE = (1, 1, 1)
 
 def setup_fonts():
-    """Настройка шрифтов"""
+    """Настройка шрифтов с поддержкой кириллицы"""
+    # Шрифты с поддержкой кириллицы
     font_paths = [
-        ("C:/Windows/Fonts/arial.ttf", "C:/Windows/Fonts/arialbd.ttf"),
-        ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"),
-        ("/Library/Fonts/Arial.ttf", "/Library/Fonts/Arial Bold.ttf"),
+        ("C:/Windows/Fonts/arial.ttf", "C:/Windows/Fonts/arialbd.ttf", "C:/Windows/Fonts/ariali.ttf"),
+        ("C:/Windows/Fonts/times.ttf", "C:/Windows/Fonts/timesbd.ttf", "C:/Windows/Fonts/timesi.ttf"),
+        ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf"),
+        ("/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Italic.ttf"),
     ]
     
-    for regular, bold in font_paths:
+    regular_font = 'Helvetica'
+    bold_font = 'Helvetica-Bold'
+    italic_font = 'Helvetica'
+    
+    for regular, bold, italic in font_paths:
         if os.path.exists(regular):
             try:
                 pdfmetrics.registerFont(TTFont('CustomFont', regular))
+                regular_font = 'CustomFont'
                 if os.path.exists(bold):
                     pdfmetrics.registerFont(TTFont('CustomBold', bold))
+                    bold_font = 'CustomBold'
                 else:
                     pdfmetrics.registerFont(TTFont('CustomBold', regular))
-                return 'CustomFont', 'CustomBold'
+                    bold_font = 'CustomBold'
+                if os.path.exists(italic):
+                    pdfmetrics.registerFont(TTFont('CustomItalic', italic))
+                    italic_font = 'CustomItalic'
+                else:
+                    italic_font = regular_font
+                logger.info(f"Загружены шрифты: {regular}")
+                break
             except Exception as e:
                 logger.warning(f"Ошибка шрифта: {e}")
     
-    return 'Helvetica', 'Helvetica-Bold'
+    return regular_font, bold_font, italic_font
 
-FONT_REGULAR, FONT_BOLD = setup_fonts()
+FONT_REGULAR, FONT_BOLD, FONT_ITALIC = setup_fonts()
 
 
 @app.route('/health', methods=['GET'])
@@ -113,9 +128,8 @@ def generate_pdf():
 def draw_family_tree(c, members, width, height):
     """Рисует семейное древо"""
     
-    # Фон страницы
-    c.setFillColorRGB(*LIGHT_BG)
-    c.rect(0, 0, width, height, fill=1, stroke=0)
+    # Красивый градиентный фон
+    draw_beautiful_background(c, width, height)
     
     # Заголовок
     header_height = draw_header(c, width, height)
@@ -194,85 +208,240 @@ def draw_family_tree(c, members, width, height):
     draw_footer(c, width)
 
 
-def draw_header(c, width, height):
-    """Заголовок документа"""
-    header_h = 70
+def draw_beautiful_background(c, width, height):
+    """Рисует красивый фон с элементами дерева"""
+    # Основной градиент - от светло-бежевого к светло-зелёному (пергамент)
+    steps = 30
+    for i in range(steps):
+        ratio = i / steps
+        # От тёплого бежевого сверху к светло-зелёному снизу
+        r = 0.97 - ratio * 0.04
+        g = 0.95 - ratio * 0.01
+        b = 0.88 - ratio * 0.06
+        
+        y = height - (height / steps) * (i + 1)
+        h = height / steps + 1
+        c.setFillColorRGB(r, g, b)
+        c.rect(0, y, width, h, fill=1, stroke=0)
     
-    # Градиентный фон заголовка
-    c.setFillColorRGB(*PURPLE)
-    c.rect(0, height - header_h, width, header_h, fill=1, stroke=0)
+    # Центральный ствол дерева (снизу)
+    c.saveState()
+    c.setStrokeColorRGB(0.45, 0.35, 0.2)  # Тёмно-коричневый
+    c.setLineWidth(8)
+    c.setLineCap(1)
     
-    # Декоративная линия
-    c.setStrokeColorRGB(*PURPLE_LIGHT)
+    # Основной ствол
+    trunk_x = width / 2
+    c.line(trunk_x, 0, trunk_x, 60)
+    c.line(trunk_x - 15, 60, trunk_x, 90)
+    c.line(trunk_x + 15, 60, trunk_x, 90)
+    
+    # Корни
+    c.setLineWidth(4)
+    c.line(trunk_x, 0, trunk_x - 40, -10)
+    c.line(trunk_x, 0, trunk_x + 40, -10)
+    c.line(trunk_x - 20, 10, trunk_x - 50, 0)
+    c.line(trunk_x + 20, 10, trunk_x + 50, 0)
+    
+    c.restoreState()
+    
+    # Декоративные ветви по углам
+    c.saveState()
+    c.setStrokeColorRGB(0.55, 0.45, 0.25)  # Коричневый для веток
+    c.setLineWidth(4)
+    c.setLineCap(1)
+    
+    # Левый верхний угол - ветка с изгибом
+    c.line(0, height, 60, height - 40)
+    c.line(60, height - 40, 50, height - 80)
+    c.line(60, height - 40, 100, height - 60)
+    c.line(100, height - 60, 90, height - 100)
+    c.line(100, height - 60, 140, height - 75)
+    
+    # Правый верхний угол
+    c.line(width, height, width - 60, height - 40)
+    c.line(width - 60, height - 40, width - 50, height - 80)
+    c.line(width - 60, height - 40, width - 100, height - 60)
+    c.line(width - 100, height - 60, width - 90, height - 100)
+    c.line(width - 100, height - 60, width - 140, height - 75)
+    
+    # Нижние углы - маленькие веточки
     c.setLineWidth(3)
-    c.line(50, height - header_h, width - 50, height - header_h)
+    c.line(0, 50, 40, 70)
+    c.line(40, 70, 30, 100)
+    c.line(40, 70, 70, 85)
     
-    # Заголовок
-    c.setFillColorRGB(*WHITE)
+    c.line(width, 50, width - 40, 70)
+    c.line(width - 40, 70, width - 30, 100)
+    c.line(width - 40, 70, width - 70, 85)
+    
+    c.restoreState()
+    
+    # Листочки (разных оттенков зелёного)
+    leaf_positions = [
+        # Верхний левый
+        (55, height - 75, 10), (95, height - 55, 8), (45, height - 95, 7),
+        (135, height - 70, 9), (85, height - 95, 6), (110, height - 85, 7),
+        # Верхний правый
+        (width - 55, height - 75, 10), (width - 95, height - 55, 8), (width - 45, height - 95, 7),
+        (width - 135, height - 70, 9), (width - 85, height - 95, 6), (width - 110, height - 85, 7),
+        # Нижний левый
+        (35, 95, 7), (65, 80, 6), (25, 75, 5),
+        # Нижний правый
+        (width - 35, 95, 7), (width - 65, 80, 6), (width - 25, 75, 5),
+    ]
+    
+    for x, y, size in leaf_positions:
+        # Разные оттенки зелёного
+        green_shade = 0.5 + (hash((x, y)) % 20) / 100
+        c.setFillColorRGB(0.3, green_shade, 0.3)
+        c.circle(x, y, size, fill=1, stroke=0)
+    
+    # Декоративная двойная рамка (золотисто-коричневая)
+    margin = 12
+    c.setStrokeColorRGB(0.6, 0.5, 0.3)
+    c.setLineWidth(3)
+    c.roundRect(margin, margin, width - 2*margin, height - 2*margin, 15, fill=0, stroke=1)
+    
+    # Внутренняя рамка
+    c.setStrokeColorRGB(0.75, 0.65, 0.45)
+    c.setLineWidth(1.5)
+    c.roundRect(margin + 6, margin + 6, width - 2*margin - 12, height - 2*margin - 12, 12, fill=0, stroke=1)
+    
+    # Декоративные уголки рамки
+    corner_len = 25
+    c.setStrokeColorRGB(0.5, 0.4, 0.2)
+    c.setLineWidth(2)
+    # Верхний левый
+    c.line(margin + 3, height - margin - 3, margin + 3, height - margin - 3 - corner_len)
+    c.line(margin + 3, height - margin - 3, margin + 3 + corner_len, height - margin - 3)
+    # Верхний правый
+    c.line(width - margin - 3, height - margin - 3, width - margin - 3, height - margin - 3 - corner_len)
+    c.line(width - margin - 3, height - margin - 3, width - margin - 3 - corner_len, height - margin - 3)
+    # Нижний левый
+    c.line(margin + 3, margin + 3, margin + 3, margin + 3 + corner_len)
+    c.line(margin + 3, margin + 3, margin + 3 + corner_len, margin + 3)
+    # Нижний правый
+    c.line(width - margin - 3, margin + 3, width - margin - 3, margin + 3 + corner_len)
+    c.line(width - margin - 3, margin + 3, width - margin - 3 - corner_len, margin + 3)
+
+
+def draw_header(c, width, height):
+    """Заголовок документа с рукописным шрифтом"""
+    header_h = 80
+    
+    # Декоративный баннер для заголовка
+    banner_y = height - header_h + 10
+    banner_h = 60
+    
+    # Фон баннера - пергамент
+    c.setFillColorRGB(0.95, 0.92, 0.85)
+    c.roundRect(width/2 - 200, banner_y, 400, banner_h, 10, fill=1, stroke=0)
+    
+    # Рамка баннера
+    c.setStrokeColorRGB(0.6, 0.5, 0.3)
+    c.setLineWidth(2)
+    c.roundRect(width/2 - 200, banner_y, 400, banner_h, 10, fill=0, stroke=1)
+    
+    # Декоративные завитки по бокам
+    c.setStrokeColorRGB(0.5, 0.4, 0.2)
+    c.setLineWidth(1.5)
+    # Левый завиток
+    c.arc(width/2 - 210, banner_y + 15, width/2 - 190, banner_y + 45, 90, 180)
+    # Правый завиток
+    c.arc(width/2 + 190, banner_y + 15, width/2 + 210, banner_y + 45, 270, 180)
+    
+    # Заголовок курсивом (с поддержкой кириллицы)
+    c.setFillColorRGB(0.3, 0.2, 0.1)  # Тёмно-коричневый
     c.setFont(FONT_BOLD, 32)
-    c.drawCentredString(width / 2, height - 45, "СЕМЕЙНОЕ ДРЕВО")
+    c.drawCentredString(width / 2, banner_y + 22, "Семейное Древо")
     
     # Подзаголовок
-    c.setFont(FONT_REGULAR, 11)
-    c.setFillColorRGB(0.9, 0.9, 0.95)
-    c.drawCentredString(width / 2, height - 62, "Создано в приложении FamilyOne")
+    c.setFont(FONT_REGULAR, 10)
+    c.setFillColorRGB(0.5, 0.4, 0.3)
+    c.drawCentredString(width / 2, banner_y + 5, "~ FamilyOne ~")
+    
+    # Декоративная линия под заголовком
+    c.setStrokeColorRGB(0.6, 0.5, 0.3)
+    c.setLineWidth(1)
+    c.line(width/2 - 100, banner_y + 2, width/2 + 100, banner_y + 2)
     
     return header_h
 
 
 def draw_gen_label(c, name, width, y):
-    """Метка поколения"""
-    # Линия слева
-    c.setStrokeColorRGB(*LINE_COLOR)
+    """Метка поколения в винтажном стиле"""
+    text_width = len(name) * 8 + 40
+    
+    # Фон для метки - пергамент
+    c.setFillColorRGB(0.95, 0.92, 0.85)
+    c.roundRect(width/2 - text_width/2, y - 8, text_width, 20, 5, fill=1, stroke=0)
+    
+    # Рамка метки
+    c.setStrokeColorRGB(0.6, 0.5, 0.3)
+    c.setLineWidth(1)
+    c.roundRect(width/2 - text_width/2, y - 8, text_width, 20, 5, fill=0, stroke=1)
+    
+    # Декоративные линии по бокам
+    c.setStrokeColorRGB(0.7, 0.6, 0.4)
     c.setLineWidth(1.5)
-    line_width = 80
+    line_width = 60
     
-    text_width = len(name) * 7 + 20
+    # Левая линия с завитком
+    c.line(width/2 - text_width/2 - line_width, y + 2, width/2 - text_width/2 - 8, y + 2)
+    c.circle(width/2 - text_width/2 - line_width - 4, y + 2, 3, fill=1, stroke=0)
     
-    c.line(width/2 - text_width/2 - line_width, y, width/2 - text_width/2 - 10, y)
-    c.line(width/2 + text_width/2 + 10, y, width/2 + text_width/2 + line_width, y)
+    # Правая линия с завитком
+    c.line(width/2 + text_width/2 + 8, y + 2, width/2 + text_width/2 + line_width, y + 2)
+    c.circle(width/2 + text_width/2 + line_width + 4, y + 2, 3, fill=1, stroke=0)
     
-    # Текст
-    c.setFillColorRGB(*ORANGE)
-    c.setFont(FONT_BOLD, 13)
-    c.drawCentredString(width / 2, y - 4, name)
+    # Текст курсивом (с поддержкой кириллицы)
+    c.setFillColorRGB(0.4, 0.25, 0.1)  # Тёмно-коричневый
+    c.setFont(FONT_ITALIC, 13)
+    c.drawCentredString(width / 2, y - 3, name)
 
 
 def draw_member_card(c, member, x, y, w, h):
-    """Карточка члена семьи"""
+    """Карточка члена семьи в стиле старинной рамки"""
     
     # Тень
-    c.setFillColorRGB(0.85, 0.83, 0.88)
-    c.roundRect(x + 4, y - 4, w, h, 10, fill=1, stroke=0)
+    c.setFillColorRGB(0.7, 0.65, 0.55)
+    c.roundRect(x + 3, y - 3, w, h, 8, fill=1, stroke=0)
     
-    # Основа карточки
-    c.setFillColorRGB(*WHITE)
-    c.roundRect(x, y, w, h, 10, fill=1, stroke=0)
+    # Основа карточки - пергамент
+    c.setFillColorRGB(0.98, 0.96, 0.90)
+    c.roundRect(x, y, w, h, 8, fill=1, stroke=0)
     
-    # Рамка
-    c.setStrokeColorRGB(*CARD_BORDER)
-    c.setLineWidth(1.5)
-    c.roundRect(x, y, w, h, 10, fill=0, stroke=1)
+    # Внешняя рамка - золотисто-коричневая
+    c.setStrokeColorRGB(0.6, 0.5, 0.3)
+    c.setLineWidth(2)
+    c.roundRect(x, y, w, h, 8, fill=0, stroke=1)
     
-    # Цветная полоса сверху
-    c.setFillColorRGB(*PURPLE)
-    # Верхняя часть с закруглением
-    c.saveState()
-    path = c.beginPath()
-    path.moveTo(x, y + h - 10)
-    path.lineTo(x, y + h - 6)
-    path.arcTo(x, y + h - 10, x + 10, y + h, 90, 90)
-    path.lineTo(x + w - 10, y + h)
-    path.arcTo(x + w - 10, y + h - 10, x + w, y + h, 0, 90)
-    path.lineTo(x + w, y + h - 10)
-    path.close()
-    c.drawPath(path, fill=1, stroke=0)
-    c.restoreState()
+    # Внутренняя декоративная рамка
+    c.setStrokeColorRGB(0.75, 0.65, 0.45)
+    c.setLineWidth(1)
+    c.roundRect(x + 4, y + 4, w - 8, h - 8, 5, fill=0, stroke=1)
     
-    curr_y = y + h - 20
+    # Декоративные уголки
+    corner_size = 12
+    c.setFillColorRGB(0.6, 0.5, 0.3)
+    # Верхний левый
+    c.line(x + 8, y + h - 8, x + 8, y + h - 8 - corner_size)
+    c.line(x + 8, y + h - 8, x + 8 + corner_size, y + h - 8)
+    # Верхний правый
+    c.line(x + w - 8, y + h - 8, x + w - 8, y + h - 8 - corner_size)
+    c.line(x + w - 8, y + h - 8, x + w - 8 - corner_size, y + h - 8)
+    # Нижний левый
+    c.line(x + 8, y + 8, x + 8, y + 8 + corner_size)
+    c.line(x + 8, y + 8, x + 8 + corner_size, y + 8)
+    # Нижний правый
+    c.line(x + w - 8, y + 8, x + w - 8, y + 8 + corner_size)
+    c.line(x + w - 8, y + 8, x + w - 8 - corner_size, y + 8)
     
-    # Фото
-    photo_size = 50
+    curr_y = y + h - 15
+    
+    # Фото (уменьшено для лучшего размещения)
+    photo_size = 45
     photo_x = x + (w - photo_size) / 2
     photo_y = curr_y - photo_size
     
@@ -286,40 +455,42 @@ def draw_member_card(c, member, x, y, w, h):
     else:
         draw_avatar(c, photo_x, photo_y, photo_size)
     
-    curr_y = photo_y - 8
+    # Увеличенный отступ от фото до текста
+    curr_y = photo_y - 12
     
-    # Имя
-    c.setFillColorRGB(*DARK_TEXT)
-    c.setFont(FONT_BOLD, 11)
+    # Имя - тёмно-коричневым
+    c.setFillColorRGB(0.25, 0.2, 0.1)
+    c.setFont(FONT_BOLD, 9)
     
     name = f"{member.get('lastName', '')} {member.get('firstName', '')}"
-    if len(name) > 16:
-        name = name[:14] + ".."
+    if len(name) > 18:
+        name = name[:16] + ".."
     c.drawCentredString(x + w/2, curr_y, name)
-    curr_y -= 13
+    curr_y -= 10
     
     # Отчество
     patronymic = member.get('patronymic', '')
     if patronymic:
-        c.setFont(FONT_REGULAR, 9)
+        c.setFont(FONT_REGULAR, 8)
+        c.setFillColorRGB(0.4, 0.35, 0.25)
         if len(patronymic) > 18:
             patronymic = patronymic[:16] + ".."
         c.drawCentredString(x + w/2, curr_y, patronymic)
-        curr_y -= 11
+        curr_y -= 9
     
-    # Роль
+    # Роль - курсивом, зелёным (с поддержкой кириллицы)
     role = get_role_name(member.get('role', 'OTHER'))
-    c.setFillColorRGB(*PURPLE)
-    c.setFont(FONT_BOLD, 9)
+    c.setFillColorRGB(0.2, 0.5, 0.3)  # Тёмно-зелёный
+    c.setFont(FONT_ITALIC, 10)
     c.drawCentredString(x + w/2, curr_y, role)
     curr_y -= 12
     
-    # Дата
+    # Дата - мелким шрифтом
     birth = member.get('birthDate', '')
     if birth:
-        c.setFillColorRGB(*GRAY_TEXT)
-        c.setFont(FONT_REGULAR, 9)
-        c.drawCentredString(x + w/2, curr_y, birth)
+        c.setFillColorRGB(0.5, 0.45, 0.35)
+        c.setFont(FONT_REGULAR, 8)
+        c.drawCentredString(x + w/2, curr_y, f"✦ {birth} ✦")
 
 
 def draw_photo(c, photo_data, x, y, size):
