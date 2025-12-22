@@ -133,6 +133,11 @@ class MainActivity : AppCompatActivity() {
             overridePendingTransition(R.anim.scale_in, R.anim.fade_out)
         }
         
+        binding.btnPhotoAssignment.setOnClickListener {
+            startActivity(Intent(this, PhotoAssignmentActivity::class.java))
+            overridePendingTransition(R.anim.slide_in_right, R.anim.fade_out)
+        }
+        
         binding.btnExport.setOnClickListener {
             startActivity(Intent(this, ExportActivity::class.java))
             overridePendingTransition(R.anim.slide_in_right, R.anim.fade_out)

@@ -31,4 +31,10 @@
         <item name="postSplashScreenTheme">@style/Theme.FamilyOne</item>
         <item name="windowSplashScreenIconBackgroundColor">@color/purple_button_light</item>
     </style>
+    
+    <!-- Circle Image Style -->
+    <style name="CircleImageView" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
 </resources>
