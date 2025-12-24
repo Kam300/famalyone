@@ -32,7 +32,7 @@ data class RegisteredFace(
 object FaceRecognitionApi {
     
     // URL сервера - измените на свой
-    private var serverUrl = "http://10.0.2.2:5000" // Для эмулятора Android
+    private var serverUrl = "http://10.201.148.53:5000" // Для эмулятора Android
     // Для реального устройства используйте IP компьютера: "http://192.168.1.100:5000"
     
     fun setServerUrl(url: String) {
@@ -142,6 +142,36 @@ object FaceRecognitionApi {
     suspend fun deleteFace(memberId: Long): Result<String> = withContext(Dispatchers.IO) {
         try {
             val url = URL("$serverUrl/delete_face/$memberId")
+            val connection = url.openConnection() as HttpURLConnection
+            connection.requestMethod = "DELETE"
+            connection.connectTimeout = 10000
+            connection.readTimeout = 10000
+            
+            val responseCode = connection.responseCode
+            val response = if (responseCode == HttpURLConnection.HTTP_OK) {
+                connection.inputStream.bufferedReader().use { it.readText() }
+            } else {
+                connection.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
+            }
+            
+            connection.disconnect()
+            
+            val jsonResponse = JSONObject(response)
+            
+            if (jsonResponse.getBoolean("success")) {
+                Result.success(jsonResponse.getString("message"))
+            } else {
+                Result.failure(Exception(jsonResponse.getString("error")))
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+    
+    suspend fun clearAll(): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            val url = URL("$serverUrl/clear_all")
             val connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "DELETE"
             connection.connectTimeout = 10000

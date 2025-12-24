@@ -52,13 +52,8 @@ class AddMemberActivity : AppCompatActivity() {
             val savedPath = com.example.familyone.utils.ImageUtils.saveImageToInternalStorage(this, it)
             if (savedPath != null) {
                 selectedPhotoUri = Uri.parse("file://$savedPath")
-                com.bumptech.glide.Glide.with(this)
-                    .load(java.io.File(savedPath))
-                    .placeholder(R.mipmap.ic_launcher)
-                    .error(R.mipmap.ic_launcher)
-                    .centerCrop()
-                    .into(binding.ivPhotoPreview)
-                binding.ivPhotoPreview.visibility = View.VISIBLE
+                showPhotoPreview(savedPath)
+                toast("✓ Фото добавлено")
             } else {
                 toast("Ошибка сохранения фото")
             }
@@ -203,6 +198,207 @@ class AddMemberActivity : AppCompatActivity() {
         binding.btnDeleteAll.setOnClickListener {
             showDeleteAllConfirmation()
         }
+        
+        // Кнопка удаления фото
+        binding.fabDeletePhoto.setOnClickListener {
+            showDeletePhotoConfirmation()
+        }
+        
+        // Кнопка полноэкранного просмотра
+        binding.fabFullscreen.setOnClickListener {
+            showFullscreenPhoto()
+        }
+        
+        // Клик по превью для полноэкранного просмотра
+        binding.ivPhotoPreview.setOnClickListener {
+            showFullscreenPhoto()
+        }
+        
+        // Добавляем форматирование номера телефона при вводе
+        setupPhoneNumberFormatting()
+    }
+    
+    /**
+     * Показывает предпросмотр фото
+     */
+    private fun showPhotoPreview(photoPath: String) {
+        com.bumptech.glide.Glide.with(this)
+            .load(java.io.File(photoPath))
+            .placeholder(R.mipmap.ic_launcher)
+            .error(R.mipmap.ic_launcher)
+            .centerCrop()
+            .into(binding.ivPhotoPreview)
+        
+        binding.framePhotoPreview.visibility = View.VISIBLE
+        binding.layoutNoPhoto.visibility = View.GONE
+        binding.btnSelectPhoto.text = "Изменить фото"
+    }
+    
+    /**
+     * Скрывает предпросмотр фото
+     */
+    private fun hidePhotoPreview() {
+        binding.framePhotoPreview.visibility = View.GONE
+        binding.layoutNoPhoto.visibility = View.VISIBLE
+        binding.btnSelectPhoto.text = getString(R.string.select_photo)
+        selectedPhotoUri = null
+    }
+    
+    /**
+     * Показывает диалог подтверждения удаления фото
+     */
+    private fun showDeletePhotoConfirmation() {
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Удалить фото?")
+            .setMessage("Вы уверены, что хотите удалить выбранное фото?")
+            .setPositiveButton("Удалить") { _, _ ->
+                // Удаляем файл если он был сохранен
+                selectedPhotoUri?.let { uri ->
+                    val path = uri.toString().replace("file://", "")
+                    com.example.familyone.utils.ImageUtils.deleteImageFromInternalStorage(path)
+                }
+                hidePhotoPreview()
+                toast("Фото удалено")
+            }
+            .setNegativeButton("Отмена", null)
+            .show()
+    }
+    
+    /**
+     * Показывает фото в полноэкранном режиме
+     */
+    private fun showFullscreenPhoto() {
+        selectedPhotoUri?.let { uri ->
+            val photoPath = uri.toString().replace("file://", "")
+            
+            val dialogView = layoutInflater.inflate(R.layout.dialog_photo_view, null)
+            val imageView = dialogView.findViewById<android.widget.ImageView>(R.id.ivPhoto)
+            
+            // Загружаем фото
+            com.bumptech.glide.Glide.with(this)
+                .load(java.io.File(photoPath))
+                .into(imageView)
+            
+            // Создаем диалог с фото
+            val dialog = MaterialAlertDialogBuilder(this)
+                .setView(dialogView)
+                .setPositiveButton("Закрыть", null)
+                .create()
+            
+            // Закрытие по клику на фото
+            imageView.setOnClickListener {
+                dialog.dismiss()
+            }
+            
+            dialog.show()
+        }
+    }
+    
+    /**
+     * Настраивает автоматическое форматирование номера телефона при вводе
+     */
+    private fun setupPhoneNumberFormatting() {
+        binding.etPhoneNumber.addTextChangedListener(object : android.text.TextWatcher {
+            private var isFormatting = false
+            private var deletingHyphen = false
+            private var hyphenStart = 0
+            
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
+                if (isFormatting) return
+                
+                // Проверяем, удаляется ли дефис или пробел
+                if (count == 1 && after == 0 && s != null) {
+                    val char = s[start]
+                    if (char == '-' || char == ' ' || char == '(' || char == ')') {
+                        deletingHyphen = true
+                        hyphenStart = start
+                    }
+                }
+            }
+            
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            
+            override fun afterTextChanged(s: android.text.Editable?) {
+                if (isFormatting || s == null) return
+                
+                isFormatting = true
+                
+                // Убираем ошибку при вводе
+                binding.tilPhoneNumber.error = null
+                
+                // Получаем только цифры и +
+                val digits = s.toString().replace(Regex("[^+\\d]"), "")
+                
+                // Форматируем номер
+                val formatted = formatPhoneForDisplay(digits)
+                
+                if (formatted != s.toString()) {
+                    s.replace(0, s.length, formatted)
+                }
+                
+                isFormatting = false
+            }
+        })
+    }
+    
+    /**
+     * Форматирует номер для отображения при вводе
+     */
+    private fun formatPhoneForDisplay(digits: String): String {
+        if (digits.isEmpty()) return ""
+        
+        return when {
+            // Российский формат +7
+            digits.startsWith("+7") -> {
+                val rest = digits.substring(2)
+                buildString {
+                    append("+7")
+                    if (rest.isNotEmpty()) {
+                        append(" (")
+                        append(rest.take(3))
+                        if (rest.length > 3) {
+                            append(") ")
+                            append(rest.substring(3).take(3))
+                            if (rest.length > 6) {
+                                append("-")
+                                append(rest.substring(6).take(2))
+                                if (rest.length > 8) {
+                                    append("-")
+                                    append(rest.substring(8).take(2))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            // Российский формат 8
+            digits.startsWith("8") && digits.length > 1 -> {
+                val rest = digits.substring(1)
+                buildString {
+                    append("8")
+                    if (rest.isNotEmpty()) {
+                        append(" (")
+                        append(rest.take(3))
+                        if (rest.length > 3) {
+                            append(") ")
+                            append(rest.substring(3).take(3))
+                            if (rest.length > 6) {
+                                append("-")
+                                append(rest.substring(6).take(2))
+                                if (rest.length > 8) {
+                                    append("-")
+                                    append(rest.substring(8).take(2))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            // Международный формат
+            digits.startsWith("+") -> digits
+            // Просто цифры
+            else -> digits
+        }
     }
     
     private fun checkPermissionAndPickImage() {
@@ -273,13 +469,78 @@ class AddMemberActivity : AppCompatActivity() {
             isValid = false
         }
         
+        // Валидация номера телефона (если введен)
+        val phoneNumber = binding.etPhoneNumber.text?.toString()?.trim()
+        if (!phoneNumber.isNullOrEmpty() && !isValidPhoneNumber(phoneNumber)) {
+            binding.tilPhoneNumber.error = "Неверный формат номера"
+            isValid = false
+        } else {
+            binding.tilPhoneNumber.error = null
+        }
+        
         return isValid
+    }
+    
+    /**
+     * Проверяет корректность формата номера телефона
+     * Поддерживаемые форматы:
+     * - +7XXXXXXXXXX (российский)
+     * - 8XXXXXXXXXX (российский)
+     * - +XXXXXXXXXXX (международный)
+     * - Минимум 10 цифр
+     */
+    private fun isValidPhoneNumber(phone: String): Boolean {
+        // Убираем все символы кроме цифр и +
+        val cleanPhone = phone.replace(Regex("[^+\\d]"), "")
+        
+        // Проверяем минимальную длину (10 цифр)
+        val digitsOnly = cleanPhone.replace("+", "")
+        if (digitsOnly.length < 10) {
+            return false
+        }
+        
+        // Проверяем максимальную длину (15 цифр по стандарту E.164)
+        if (digitsOnly.length > 15) {
+            return false
+        }
+        
+        // Проверяем формат
+        return when {
+            // Российский формат +7
+            cleanPhone.startsWith("+7") -> digitsOnly.length == 11
+            // Российский формат 8
+            cleanPhone.startsWith("8") && !cleanPhone.startsWith("+") -> digitsOnly.length == 11
+            // Международный формат
+            cleanPhone.startsWith("+") -> digitsOnly.length in 10..15
+            // Просто цифры (локальный номер)
+            else -> digitsOnly.length in 10..15
+        }
+    }
+    
+    /**
+     * Форматирует номер телефона для сохранения
+     */
+    private fun formatPhoneNumber(phone: String): String {
+        val cleanPhone = phone.replace(Regex("[^+\\d]"), "")
+        
+        // Если начинается с 8, заменяем на +7
+        return if (cleanPhone.startsWith("8") && cleanPhone.length == 11) {
+            "+7${cleanPhone.substring(1)}"
+        } else if (!cleanPhone.startsWith("+") && cleanPhone.length >= 10) {
+            "+$cleanPhone"
+        } else {
+            cleanPhone
+        }
     }
     
     private fun saveMember() {
         if (!validateInputs()) {
             return
         }
+        
+        // Форматируем номер телефона перед сохранением
+        val phoneNumber = binding.etPhoneNumber.text?.toString()?.trim()?.takeIf { it.isNotEmpty() }
+        val formattedPhone = phoneNumber?.let { formatPhoneNumber(it) }
         
         val member = FamilyMember(
             id = editingMemberId ?: 0,
@@ -288,7 +549,7 @@ class AddMemberActivity : AppCompatActivity() {
             patronymic = binding.etPatronymic.text?.toString()?.trim()?.takeIf { it.isNotEmpty() },
             gender = selectedGender!!,
             birthDate = birthDate,
-            phoneNumber = binding.etPhoneNumber.text?.toString()?.trim()?.takeIf { it.isNotEmpty() },
+            phoneNumber = formattedPhone,
             role = selectedRole!!,
             photoUri = selectedPhotoUri?.toString(),
             fatherId = selectedFatherId,
@@ -401,16 +662,11 @@ class AddMemberActivity : AppCompatActivity() {
                         }
                     }
                     
+                    // Загружаем фото с новым предпросмотром
                     it.photoUri?.let { uriString ->
                         selectedPhotoUri = Uri.parse(uriString)
-                        // Загружаем изображение через Glide для надежности
                         val photoPath = uriString.replace("file://", "")
-                        com.bumptech.glide.Glide.with(this@AddMemberActivity)
-                            .load(java.io.File(photoPath))
-                            .placeholder(R.mipmap.ic_launcher)
-                            .error(R.mipmap.ic_launcher)
-                            .into(binding.ivPhotoPreview)
-                        binding.ivPhotoPreview.visibility = View.VISIBLE
+                        showPhotoPreview(photoPath)
                     }
                 }
             }

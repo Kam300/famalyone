@@ -18,6 +18,7 @@ import com.example.familyone.utils.ThemePreferences
 import com.example.familyone.utils.toast
 
 import com.example.familyone.workers.NotificationWorker
+import kotlinx.coroutines.launch
 
 import java.util.concurrent.TimeUnit
 
@@ -54,14 +55,62 @@ class SettingsActivity : AppCompatActivity() {
             showTimePickerDialog()
         }
         
-        // Загружаем сохранённый URL сервера
+        // === Сервер распознавания лиц ===
+        val savedFaceUrl = notificationPrefs.getString("face_server_url", "http://10.0.2.2:5000")
+        binding.etFaceServerUrl.setText(savedFaceUrl)
+        
+        binding.btnSaveFaceServerUrl.setOnClickListener {
+            val url = binding.etFaceServerUrl.text.toString().trim()
+            if (url.isNotEmpty()) {
+                notificationPrefs.edit().putString("face_server_url", url).apply()
+                com.example.familyone.api.FaceRecognitionApi.setServerUrl(url)
+                toast("✓ URL сервера распознавания сохранён")
+            } else {
+                toast("Введите URL сервера")
+            }
+        }
+        
+        binding.btnTestFaceServer.setOnClickListener {
+            testFaceServer()
+        }
+        
+        // === Сервер PDF ===
         val savedUrl = notificationPrefs.getString("pdf_server_url", "")
         binding.etPdfServerUrl.setText(savedUrl)
         
         binding.btnSaveServerUrl.setOnClickListener {
             val url = binding.etPdfServerUrl.text.toString().trim()
             notificationPrefs.edit().putString("pdf_server_url", url).apply()
-            toast("URL сервера сохранён")
+            toast("URL сервера PDF сохранён")
+        }
+    }
+    
+    private fun testFaceServer() {
+        val url = binding.etFaceServerUrl.text.toString().trim()
+        if (url.isEmpty()) {
+            toast("Введите URL сервера")
+            return
+        }
+        
+        binding.tvFaceServerStatus.visibility = android.view.View.VISIBLE
+        binding.tvFaceServerStatus.text = "🔄 Проверка подключения..."
+        binding.tvFaceServerStatus.setTextColor(getColor(R.color.text_secondary_light))
+        
+        com.example.familyone.api.FaceRecognitionApi.setServerUrl(url)
+        
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+            val isConnected = com.example.familyone.api.FaceRecognitionApi.checkHealth()
+            
+            if (isConnected) {
+                binding.tvFaceServerStatus.text = "✓ Сервер доступен!"
+                binding.tvFaceServerStatus.setTextColor(getColor(R.color.green_accent))
+                
+                // Автоматически сохраняем если подключение успешно
+                notificationPrefs.edit().putString("face_server_url", url).apply()
+            } else {
+                binding.tvFaceServerStatus.text = "✗ Сервер недоступен. Проверьте URL и сеть"
+                binding.tvFaceServerStatus.setTextColor(getColor(R.color.red_button))
+            }
         }
     }
     

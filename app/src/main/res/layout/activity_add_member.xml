@@ -221,13 +221,17 @@
                     android:layout_marginBottom="16dp"
                     android:hint="@string/phone_number"
                     app:errorEnabled="true"
-                    app:helperText="@string/phone_optional">
+                    app:helperText="Формат: +7XXXXXXXXXX или 8XXXXXXXXXX"
+                    app:startIconDrawable="@drawable/ic_phone"
+                    app:counterEnabled="true"
+                    app:counterMaxLength="20">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etPhoneNumber"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:inputType="phone" />
+                        android:inputType="phone"
+                        android:maxLength="20" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <!-- Wedding Date (for non-child roles) -->
@@ -304,28 +308,136 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Photo Selection -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnSelectPhoto"
-            style="@style/PurpleButton"
+        <!-- Photo Selection Card -->
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:text="@string/select_photo"
-            app:icon="@android:drawable/ic_menu_gallery"
-            app:iconGravity="start" />
+            app:cardCornerRadius="20dp"
+            app:cardElevation="6dp"
+            app:cardBackgroundColor="?attr/colorSurface"
+            android:layout_marginBottom="16dp">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:text="@string/photo_hint"
-            android:textColor="@color/white"
-            android:textSize="12sp"
-            android:alpha="0.9"
-            android:layout_marginBottom="16dp" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
 
-        <!-- Photo Preview -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="📷 Фото профиля"
+                    android:textColor="@color/text_primary_light"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="12dp"/>
+
+                <!-- Photo Preview Container -->
+                <FrameLayout
+                    android:id="@+id/framePhotoPreview"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:visibility="gone">
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="match_parent"
+                        android:layout_height="200dp"
+                        app:cardCornerRadius="16dp"
+                        app:cardElevation="4dp">
+
+                        <ImageView
+                            android:id="@+id/ivPhotoPreview"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:scaleType="centerCrop"
+                            android:contentDescription="Предпросмотр фото"/>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- Delete Photo Button -->
+                    <com.google.android.material.floatingactionbutton.FloatingActionButton
+                        android:id="@+id/fabDeletePhoto"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="top|end"
+                        android:layout_margin="8dp"
+                        android:src="@android:drawable/ic_menu_close_clear_cancel"
+                        android:contentDescription="Удалить фото"
+                        app:fabSize="mini"
+                        app:backgroundTint="@color/red_button"
+                        app:tint="@color/white"/>
+
+                    <!-- Fullscreen Button -->
+                    <com.google.android.material.floatingactionbutton.FloatingActionButton
+                        android:id="@+id/fabFullscreen"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="bottom|end"
+                        android:layout_margin="8dp"
+                        android:src="@android:drawable/ic_menu_view"
+                        android:contentDescription="Полный экран"
+                        app:fabSize="mini"
+                        app:backgroundTint="@color/purple_button"
+                        app:tint="@color/white"/>
+                </FrameLayout>
+
+                <!-- No Photo Placeholder -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/layoutNoPhoto"
+                    android:layout_width="match_parent"
+                    android:layout_height="160dp"
+                    android:layout_marginBottom="12dp"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="0dp"
+                    app:cardBackgroundColor="@color/card_background_light">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:orientation="vertical"
+                        android:gravity="center">
+
+                        <ImageView
+                            android:layout_width="56dp"
+                            android:layout_height="56dp"
+                            android:src="@drawable/ic_person_placeholder"
+                            android:tint="@color/text_tertiary_light"
+                            android:layout_marginBottom="8dp"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Фото не выбрано"
+                            android:textColor="@color/text_secondary_light"
+                            android:textSize="14sp"/>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Select Photo Button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnSelectPhoto"
+                    style="@style/PurpleButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:text="@string/select_photo"
+                    android:textSize="16sp"
+                    app:icon="@android:drawable/ic_menu_gallery"
+                    app:iconGravity="textStart"
+                    app:iconPadding="8dp"
+                    app:cornerRadius="14dp"/>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/photo_hint"
+                    android:textColor="@color/text_secondary_light"
+                    android:textSize="12sp"
+                    android:gravity="center"
+                    android:layout_marginTop="8dp"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Old Photo Preview (hidden, kept for compatibility) -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -337,7 +449,7 @@
             android:id="@+id/cvPhotoPreview">
             
             <com.google.android.material.imageview.ShapeableImageView
-                android:id="@+id/ivPhotoPreview"
+                android:id="@+id/ivPhotoPreviewOld"
                 android:layout_width="140dp"
                 android:layout_height="140dp"
                 android:scaleType="centerCrop"

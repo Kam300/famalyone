@@ -358,6 +358,42 @@ def list_faces():
         }), 500
 
 
+@app.route('/clear_all', methods=['DELETE'])
+def clear_all():
+    """Очистка всей базы распознавания лиц"""
+    global face_encodings_db
+    try:
+        count = len(face_encodings_db)
+        
+        # Очищаем базу в памяти
+        face_encodings_db = {}
+        
+        # Удаляем файл кодировок
+        if os.path.exists(ENCODINGS_FILE):
+            os.remove(ENCODINGS_FILE)
+        
+        # Удаляем все эталонные фото
+        for filename in os.listdir(REFERENCE_PHOTOS_DIR):
+            filepath = os.path.join(REFERENCE_PHOTOS_DIR, filename)
+            if os.path.isfile(filepath):
+                os.remove(filepath)
+        
+        logger.info(f"База очищена. Удалено {count} лиц")
+        
+        return jsonify({
+            'success': True,
+            'message': f'База очищена. Удалено {count} лиц',
+            'deleted_count': count
+        })
+        
+    except Exception as e:
+        logger.error(f"Ошибка очистки базы: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
 if __name__ == '__main__':
     # Загружаем сохраненные кодировки при запуске
     load_encodings()
