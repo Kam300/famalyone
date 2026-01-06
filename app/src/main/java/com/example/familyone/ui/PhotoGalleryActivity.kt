@@ -737,3 +737,4 @@ class PhotoGalleryActivity : AppCompatActivity() {
             .show()
     }
 }
+

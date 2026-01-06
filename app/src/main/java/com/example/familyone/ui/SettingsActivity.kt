@@ -55,16 +55,22 @@ class SettingsActivity : AppCompatActivity() {
             showTimePickerDialog()
         }
         
-        // === Сервер распознавания лиц ===
-        val savedFaceUrl = notificationPrefs.getString("face_server_url", "http://10.0.2.2:5000")
-        binding.etFaceServerUrl.setText(savedFaceUrl)
+        // === ЕДИНЫЙ URL сервера (Face Recognition + PDF на одном порту) ===
+        val savedServerUrl = notificationPrefs.getString("server_url", "http://10.0.2.2:5000")
+        binding.etFaceServerUrl.setText(savedServerUrl)
         
+        // При изменении Face URL сохраняем как единый server_url
         binding.btnSaveFaceServerUrl.setOnClickListener {
             val url = binding.etFaceServerUrl.text.toString().trim()
             if (url.isNotEmpty()) {
-                notificationPrefs.edit().putString("face_server_url", url).apply()
+                // Сохраняем один URL для всех сервисов
+                notificationPrefs.edit()
+                    .putString("server_url", url)
+                    .putString("face_server_url", url)  // для совместимости
+                    .putString("pdf_server_url", url)   // для совместимости
+                    .apply()
                 com.example.familyone.api.FaceRecognitionApi.setServerUrl(url)
-                toast("✓ URL сервера распознавания сохранён")
+                toast("✓ URL сервера сохранён (Face + PDF)")
             } else {
                 toast("Введите URL сервера")
             }
@@ -74,14 +80,21 @@ class SettingsActivity : AppCompatActivity() {
             testFaceServer()
         }
         
-        // === Сервер PDF ===
-        val savedUrl = notificationPrefs.getString("pdf_server_url", "")
-        binding.etPdfServerUrl.setText(savedUrl)
+        // PDF сервер теперь тот же — просто синхронизируем с Face URL
+        binding.etPdfServerUrl.setText(savedServerUrl)
         
         binding.btnSaveServerUrl.setOnClickListener {
             val url = binding.etPdfServerUrl.text.toString().trim()
-            notificationPrefs.edit().putString("pdf_server_url", url).apply()
-            toast("URL сервера PDF сохранён")
+            // Сохраняем один URL для всех
+            notificationPrefs.edit()
+                .putString("server_url", url)
+                .putString("face_server_url", url)
+                .putString("pdf_server_url", url)
+                .apply()
+            // Синхронизируем поле Face URL
+            binding.etFaceServerUrl.setText(url)
+            com.example.familyone.api.FaceRecognitionApi.setServerUrl(url)
+            toast("✓ URL сервера сохранён (Face + PDF)")
         }
     }
     
@@ -249,3 +262,4 @@ class SettingsActivity : AppCompatActivity() {
         binding.tvCurrentTheme.text = currentThemeName
     }
 }
+

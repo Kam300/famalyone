@@ -170,9 +170,27 @@ class PhotoAssignmentActivity : AppCompatActivity() {
             try {
                 // Получаем список зарегистрированных лиц на сервере
                 val serverFacesResult = FaceRecognitionApi.listFaces()
-                val serverFaceIds = serverFacesResult.getOrNull()?.map { it.memberId } ?: emptyList()
+                val serverFaceIds = serverFacesResult.getOrNull()?.map { it.memberId }?.toSet() ?: emptySet()
                 
                 android.util.Log.d("PhotoAssignment", "📋 На сервере зарегистрировано: ${serverFaceIds.size} лиц")
+                android.util.Log.d("PhotoAssignment", "📋 Server IDs: $serverFaceIds")
+                
+                // Конвертируем server IDs в local IDs для сопоставления с адаптером
+                val localRegisteredIds = serverFaceIds.mapNotNull { serverId ->
+                    try {
+                        UniqueIdHelper.fromServerId(serverId.toLong()).toString()
+                    } catch (e: Exception) {
+                        android.util.Log.w("PhotoAssignment", "⚠️ Не удалось конвертировать serverId: $serverId")
+                        null
+                    }
+                }.toSet()
+                
+                android.util.Log.d("PhotoAssignment", "📋 Local IDs: $localRegisteredIds")
+                
+                // Обновляем UI адаптера с информацией о зарегистрированных членах (local IDs)
+                withContext(Dispatchers.Main) {
+                    memberAdapter.updateRegisteredMembers(localRegisteredIds)
+                }
                 
                 // Получаем всех членов семьи с фото
                 val database = FamilyDatabase.getDatabase(applicationContext)
@@ -220,8 +238,20 @@ class PhotoAssignmentActivity : AppCompatActivity() {
                     }
                 }
                 
-                withContext(Dispatchers.Main) {
-                    if (registeredCount > 0) {
+                // Обновляем статусы после регистрации
+                if (registeredCount > 0) {
+                    val updatedFacesResult = FaceRecognitionApi.listFaces()
+                    val updatedServerIds = updatedFacesResult.getOrNull()?.map { it.memberId }?.toSet() ?: emptySet()
+                    
+                    // Конвертируем в local IDs
+                    val updatedLocalIds = updatedServerIds.mapNotNull { serverId ->
+                        try {
+                            UniqueIdHelper.fromServerId(serverId.toLong()).toString()
+                        } catch (e: Exception) { null }
+                    }.toSet()
+                    
+                    withContext(Dispatchers.Main) {
+                        memberAdapter.updateRegisteredMembers(updatedLocalIds)
                         toast("✓ Синхронизировано: $registeredCount членов семьи")
                     }
                 }
@@ -307,6 +337,21 @@ class PhotoAssignmentActivity : AppCompatActivity() {
                     toast("Синхронизация завершена")
                 }
                 
+                // Обновляем статусы в адаптере после синхронизации
+                val updatedFacesResult = FaceRecognitionApi.listFaces()
+                val updatedServerIds = updatedFacesResult.getOrNull()?.map { it.memberId }?.toSet() ?: emptySet()
+                
+                // Конвертируем в local IDs
+                val updatedLocalIds = updatedServerIds.mapNotNull { serverId ->
+                    try {
+                        UniqueIdHelper.fromServerId(serverId.toLong()).toString()
+                    } catch (e: Exception) { null }
+                }.toSet()
+                
+                withContext(Dispatchers.Main) {
+                    memberAdapter.updateRegisteredMembers(updatedLocalIds)
+                }
+                
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     binding.progressBar.visibility = View.GONE
@@ -353,13 +398,21 @@ class PhotoAssignmentActivity : AppCompatActivity() {
             selectedUri = uri
             selectedBitmap = MediaStore.Images.Media.getBitmap(contentResolver, uri)
             
+            // Показываем превью, скрываем пустое состояние
             binding.cardPhotoPreview.visibility = View.VISIBLE
+            binding.layoutEmptyState.visibility = View.GONE
+            
             Glide.with(this)
                 .load(uri)
                 .centerCrop()
                 .into(binding.ivPhotoPreview)
             
-            binding.tvSelectHint.text = "Выберите члена семьи для привязки фото\nили используйте автораспознавание"
+            // Обновляем пошаговый индикатор
+            binding.tvStep1.setTextColor(getColor(R.color.green_accent))
+            binding.tvStep1.text = "Фото выбрано"
+            binding.tvStep1.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_check_circle, 0, 0, 0)
+            binding.tvStep2.setTextColor(getColor(R.color.purple_button))
+            binding.tvStep2.setTypeface(null, android.graphics.Typeface.BOLD)
             
         } catch (e: Exception) {
             toast("Ошибка загрузки фото")
@@ -578,9 +631,19 @@ class PhotoAssignmentActivity : AppCompatActivity() {
         selectedBitmap = null
         selectedUri = null
         
+        // Скрываем превью, показываем пустое состояние
         binding.cardPhotoPreview.visibility = View.GONE
-        binding.tvSelectHint.text = "Выберите фото для привязки"
+        binding.layoutEmptyState.visibility = View.VISIBLE
         binding.tvSyncStatus.visibility = View.GONE
+        
+        // Сбрасываем пошаговый индикатор
+        binding.tvStep1.text = "1. Выбрать фото"
+        binding.tvStep1.setTextColor(getColor(R.color.purple_button))
+        binding.tvStep1.setTypeface(null, android.graphics.Typeface.BOLD)
+        binding.tvStep1.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_photo_library, 0, 0, 0)
+        binding.tvStep2.text = "2. Выбрать человека"
+        binding.tvStep2.setTextColor(getColor(R.color.text_tertiary_light))
+        binding.tvStep2.setTypeface(null, android.graphics.Typeface.NORMAL)
     }
     
     override fun onDestroy() {

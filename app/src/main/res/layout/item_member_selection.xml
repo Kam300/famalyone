@@ -32,17 +32,17 @@
                 android:src="@mipmap/ic_launcher"
                 app:shapeAppearanceOverlay="@style/CircleImageView"/>
 
-            <!-- Status indicator -->
+            <!-- Status indicator badge -->
             <ImageView
                 android:id="@+id/ivPhotoStatus"
-                android:layout_width="18dp"
-                android:layout_height="18dp"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
                 android:layout_gravity="bottom|end"
                 android:src="@drawable/ic_check_circle"
                 android:background="@drawable/circle_white_bg"/>
         </FrameLayout>
 
-        <!-- Name and Role -->
+        <!-- Name, Role and Status -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -70,6 +70,19 @@
                 android:maxLines="1"
                 android:ellipsize="end"
                 android:layout_marginTop="2dp"/>
+
+            <!-- Status Text - NEW -->
+            <TextView
+                android:id="@+id/tvStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Зарегистрирован"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:layout_marginTop="4dp"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="2dp"
+                android:background="@drawable/status_badge_background"/>
         </LinearLayout>
 
         <!-- Arrow -->

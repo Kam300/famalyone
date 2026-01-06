@@ -6,3 +6,4 @@ Pillow==10.1.0
 dlib==19.24.2
 cmake==3.27.7
 reportlab==4.0.7
+waitress==2.1.2

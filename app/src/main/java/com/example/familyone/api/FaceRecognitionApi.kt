@@ -3,6 +3,8 @@ package com.example.familyone.api
 import android.graphics.Bitmap
 import android.util.Base64
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -31,9 +33,12 @@ data class RegisteredFace(
 
 object FaceRecognitionApi {
     
-    // URL сервера - измените на свой
-    private var serverUrl = "http://10.201.148.53:5000" // Для эмулятора Android
-    // Для реального устройства используйте IP компьютера: "http://192.168.1.100:5000"
+    // URL единого сервера (Face Recognition + PDF на одном порту)
+    private var serverUrl = "http://10.0.2.2:5000" // Для эмулятора Android
+    // Для реального устройства или ngrok: установите через setServerUrl() или в настройках
+    
+    // Mutex для последовательных запросов (ограничивает параллельные соединения)
+    private val requestMutex = Mutex()
     
     fun setServerUrl(url: String) {
         serverUrl = url.trimEnd('/')
@@ -61,26 +66,46 @@ object FaceRecognitionApi {
         memberId: Long,
         memberName: String,
         photo: Bitmap
-    ): Result<String> = withContext(Dispatchers.IO) {
-        try {
-            val base64Image = bitmapToBase64(photo)
+    ): Result<String> = requestMutex.withLock {
+        withContext(Dispatchers.IO) {
+            val maxRetries = 3
+            var lastException: Exception? = null
             
-            val jsonBody = JSONObject().apply {
-                put("member_id", memberId.toString())
-                put("member_name", memberName)
-                put("image", base64Image)
+            for (attempt in 1..maxRetries) {
+                try {
+                    android.util.Log.d("FaceRecognitionApi", "🔄 Попытка $attempt/$maxRetries регистрации лица (очередь)")
+                    
+                    val base64Image = bitmapToBase64(photo)
+                    
+                    val jsonBody = JSONObject().apply {
+                        put("member_id", memberId.toString())
+                        put("member_name", memberName)
+                        put("image", base64Image)
+                    }
+                    
+                    val response = makePostRequest("$serverUrl/register_face", jsonBody)
+                    
+                    if (response.getBoolean("success")) {
+                        return@withContext Result.success(response.getString("message"))
+                    } else {
+                        return@withContext Result.failure(Exception(response.getString("error")))
+                    }
+                } catch (e: Exception) {
+                    lastException = e
+                    android.util.Log.w("FaceRecognitionApi", "⚠️ Попытка $attempt не удалась: ${e.message}")
+                    
+                    if (attempt < maxRetries) {
+                        // Задержка перед повторной попыткой (2, 4, 6 секунд)
+                        val delay = attempt * 2000L
+                        android.util.Log.d("FaceRecognitionApi", "⏳ Ждем ${delay}ms перед повторной попыткой...")
+                        Thread.sleep(delay)
+                    }
+                }
             }
             
-            val response = makePostRequest("$serverUrl/register_face", jsonBody)
-            
-            if (response.getBoolean("success")) {
-                Result.success(response.getString("message"))
-            } else {
-                Result.failure(Exception(response.getString("error")))
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            Result.failure(e)
+            android.util.Log.e("FaceRecognitionApi", "❌ Все $maxRetries попытки не удались")
+            lastException?.printStackTrace()
+            Result.failure(lastException ?: Exception("Неизвестная ошибка"))
         }
     }
     
@@ -251,8 +276,9 @@ object FaceRecognitionApi {
         connection.requestMethod = "POST"
         connection.setRequestProperty("Content-Type", "application/json")
         connection.doOutput = true
-        connection.connectTimeout = 30000
-        connection.readTimeout = 30000
+        // Увеличенные таймауты для распознавания лиц через ngrok
+        connection.connectTimeout = 120000  // 2 минуты
+        connection.readTimeout = 120000     // 2 минуты
         
         android.util.Log.d("FaceRecognitionApi", "⏳ Отправляем данные...")
         
@@ -283,10 +309,31 @@ object FaceRecognitionApi {
         return JSONObject(response)
     }
     
+    /**
+     * Конвертирует Bitmap в Base64 с оптимизацией размера для сервера
+     * Уменьшает изображение до MAX_SIZE и сжимает JPEG для быстрой передачи
+     */
     private fun bitmapToBase64(bitmap: Bitmap): String {
+        val MAX_SIZE = 800  // Максимальный размер стороны
+        val QUALITY = 70    // Качество JPEG (70% достаточно для распознавания)
+        
+        // Уменьшаем изображение если оно слишком большое
+        val scaledBitmap = if (bitmap.width > MAX_SIZE || bitmap.height > MAX_SIZE) {
+            val ratio = MAX_SIZE.toFloat() / maxOf(bitmap.width, bitmap.height)
+            val newWidth = (bitmap.width * ratio).toInt()
+            val newHeight = (bitmap.height * ratio).toInt()
+            android.util.Log.d("FaceRecognitionApi", "📐 Уменьшаем изображение: ${bitmap.width}x${bitmap.height} → ${newWidth}x${newHeight}")
+            Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true)
+        } else {
+            bitmap
+        }
+        
         val outputStream = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
+        scaledBitmap.compress(Bitmap.CompressFormat.JPEG, QUALITY, outputStream)
         val byteArray = outputStream.toByteArray()
+        
+        android.util.Log.d("FaceRecognitionApi", "📦 Размер изображения: ${byteArray.size / 1024} KB")
+        
         return Base64.encodeToString(byteArray, Base64.NO_WRAP)
     }
 }

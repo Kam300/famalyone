@@ -28,8 +28,8 @@ enum class PdfPageFormat(val formatName: String, val displayName: String) {
 
 object PdfExporter {
     
-    // URL сервера - измените на ваш IP
-    private const val SERVER_URL = "http://192.168.1.100:5001"
+    // URL единого сервера (теперь Face Recognition + PDF на одном порту 5000)
+    private const val SERVER_URL = "http://10.0.2.2:5000"
     
     suspend fun exportFamilyTree(
         context: Context,
