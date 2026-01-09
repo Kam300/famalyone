@@ -65,4 +65,37 @@
     <color name="purple_primary">#6C63FF</color>
     <color name="purple_secondary">#8B84FF</color>
     <color name="purple_light">#B8B4FF</color>
+    
+    <!-- Enhanced UI Colors -->
+    <color name="card_shadow">#14000000</color>
+    <color name="card_shadow_medium">#1F000000</color>
+    <color name="input_background">#F8F9FC</color>
+    <color name="input_stroke">#E8EAF0</color>
+    <color name="input_stroke_focused">#6C63FF</color>
+    
+    <!-- Subtle Backgrounds -->
+    <color name="bg_section">#F5F6FA</color>
+    <color name="bg_elevated">#FFFFFF</color>
+    <color name="bg_pressed">#E8E4FF</color>
+    
+    <!-- Refined Gradient Colors -->
+    <color name="gradient_warm_start">#FF7043</color>
+    <color name="gradient_warm_end">#FFB74D</color>
+    <color name="gradient_cool_start">#5C6BC0</color>
+    <color name="gradient_cool_end">#7E57C2</color>
+    
+    <!-- Status Colors -->
+    <color name="success_bg">#E8F5E9</color>
+    <color name="success_text">#2E7D32</color>
+    <color name="warning_bg">#FFF3E0</color>
+    <color name="warning_text">#EF6C00</color>
+    <color name="error_bg">#FFEBEE</color>
+    <color name="error_text">#C62828</color>
+    
+    <!-- Interactive States -->
+    <color name="ripple_light">#1A6C63FF</color>
+    <color name="ripple_dark">#336C63FF</color>
+    
+    <!-- Search -->
+    <color name="search_background">#FFFFFF</color>
 </resources>

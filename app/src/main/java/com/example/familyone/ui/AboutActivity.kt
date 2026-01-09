@@ -26,7 +26,7 @@ class AboutActivity : AppCompatActivity() {
     
     // Replace with your actual links
     private val githubRepoUrl = "https://github.com/Kam300/URL"
-    private val telegramChannelUrl = "https://t.me/toatalCode"
+    private val telegramChannelUrl = "https://t.me/TotalC0de"
     private val websiteUrl = "https://yourwebsite.com"
     private val tutorialUrl = "https://yourwebsite.com/tutorial"
     
@@ -81,7 +81,7 @@ class AboutActivity : AppCompatActivity() {
 
         
         binding.btnTutorial.setOnClickListener {
-            openUrl(tutorialUrl)
+            startActivity(Intent(this, OnboardingActivity::class.java))
         }
         
         binding.btnPhotoGallery.setOnClickListener {

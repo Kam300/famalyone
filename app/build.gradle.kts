@@ -57,7 +57,7 @@ dependencies {
     
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
-    
+    implementation("com.squareup.okhttp3:okhttp:4.9.3")
     // Glide
     implementation(libs.glide)
     ksp(libs.glide.compiler)

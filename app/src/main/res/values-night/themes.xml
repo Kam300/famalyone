@@ -3,13 +3,13 @@
     <style name="Base.Theme.FamilyOne" parent="Theme.Material3.Dark.NoActionBar">
         <item name="colorPrimary">@color/surface_dark</item>
         <item name="colorOnPrimary">@color/white</item>
-        <item name="colorPrimaryContainer">@color/card_background_light</item>
+        <item name="colorPrimaryContainer">@color/card_dark</item>
         <item name="colorSecondary">@color/purple_button_light</item>
         <item name="colorOnSecondary">@color/text_on_purple</item>
         <item name="android:statusBarColor">@color/background_dark</item>
         <item name="android:navigationBarColor">@color/background_dark</item>
         <item name="android:windowLightStatusBar">false</item>
-        <item name="colorSurface">@color/card_background_light</item>
+        <item name="colorSurface">@color/card_dark</item>
         <item name="colorOnSurface">@color/text_primary_dark</item>
         <item name="android:textColorPrimary">@color/text_primary_dark</item>
         <item name="android:textColorSecondary">@color/text_secondary_dark</item>
@@ -20,7 +20,7 @@
         <item name="fontFamily">sans-serif</item>
         <item name="alertDialogTheme">@style/ModernDialog.Dark</item>
         <item name="materialAlertDialogTheme">@style/ModernDialog.Dark</item>
-        <item name="textInputStyle">@style/RoundedEditText</item>
+        <item name="textInputStyle">@style/ModernEditText</item>
     </style>
     
     <!-- Splash Screen Theme for Dark -->
@@ -36,5 +36,48 @@
     <style name="CircleImageView" parent="">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">50%</item>
+    </style>
+    
+    <!-- Dark Card Style -->
+    <style name="RoundedCard" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardCornerRadius">20dp</item>
+        <item name="cardElevation">6dp</item>
+        <item name="contentPadding">16dp</item>
+        <item name="cardBackgroundColor">@color/card_dark</item>
+    </style>
+    
+    <!-- Dark Modern Input Field Style -->
+    <style name="ModernEditText" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxCornerRadiusTopStart">16dp</item>
+        <item name="boxCornerRadiusTopEnd">16dp</item>
+        <item name="boxCornerRadiusBottomStart">16dp</item>
+        <item name="boxCornerRadiusBottomEnd">16dp</item>
+        <item name="boxStrokeWidth">1.5dp</item>
+        <item name="boxStrokeWidthFocused">2dp</item>
+        <item name="boxStrokeColor">@color/purple_button_light</item>
+        <item name="boxBackgroundColor">@color/surface_dark</item>
+        <item name="hintTextColor">@color/text_secondary_dark</item>
+        <item name="android:textColorHint">@color/text_secondary_dark</item>
+    </style>
+    
+    <!-- Dark Section Header Style -->
+    <style name="SectionHeader">
+        <item name="android:textSize">13sp</item>
+        <item name="android:textColor">@color/text_secondary_dark</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:letterSpacing">0.08</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+    
+    <!-- Dark Rounded EditText -->
+    <style name="RoundedEditText" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxCornerRadiusTopStart">14dp</item>
+        <item name="boxCornerRadiusTopEnd">14dp</item>
+        <item name="boxCornerRadiusBottomStart">14dp</item>
+        <item name="boxCornerRadiusBottomEnd">14dp</item>
+        <item name="boxStrokeWidth">2dp</item>
+        <item name="boxStrokeColor">@color/purple_button_light</item>
+        <item name="boxBackgroundColor">@color/surface_dark</item>
+        <item name="hintTextColor">@color/text_secondary_dark</item>
     </style>
 </resources>

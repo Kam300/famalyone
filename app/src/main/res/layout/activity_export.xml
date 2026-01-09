@@ -65,7 +65,7 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="📥 Импорт данных"
+                    android:text="• Импорт данных"
                     android:textColor="@color/text_primary_light"
                     android:textSize="16sp"
                     android:textStyle="bold"
@@ -114,7 +114,7 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="📤 Экспорт данных"
+                    android:text="• Экспорт данных"
                     android:textColor="@color/text_primary_light"
                     android:textSize="16sp"
                     android:textStyle="bold"
@@ -194,7 +194,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="📁 Информация"
+                    android:text="• Информация"
                     android:textColor="@color/text_primary_light"
                     android:textSize="16sp"
                     android:textStyle="bold"

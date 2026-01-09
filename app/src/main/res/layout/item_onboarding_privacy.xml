@@ -4,13 +4,13 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="32dp">
+    android:padding="24dp">
 
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:cardCornerRadius="32dp"
-        app:cardElevation="12dp"
+        app:cardCornerRadius="24dp"
+        app:cardElevation="8dp"
         app:cardBackgroundColor="?attr/colorSurface"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -21,41 +21,52 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="40dp"
-            android:gravity="center">
+            android:padding="24dp">
 
             <!-- Icon -->
             <ImageView
-                android:id="@+id/ivIcon"
-                android:layout_width="80dp"
-                android:layout_height="80dp"
-                android:src="@drawable/ic_family_tree"
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_info"
                 app:tint="@color/purple_button"
-                android:layout_marginBottom="32dp"/>
+                android:layout_marginBottom="20dp"/>
 
             <!-- Title -->
             <TextView
-                android:id="@+id/tvTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Добро пожаловать!"
-                android:textSize="22sp"
+                android:text="Политика конфиденциальности"
+                android:textSize="20sp"
                 android:textStyle="bold"
                 android:textColor="@color/text_primary_light"
                 android:gravity="center"
-                android:maxLines="2"
                 android:layout_marginBottom="16dp"/>
 
-            <!-- Description -->
-            <TextView
-                android:id="@+id/tvDescription"
+            <!-- Policy Text -->
+            <ScrollView
+                android:layout_width="match_parent"
+                android:layout_height="200dp"
+                android:layout_marginBottom="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/privacy_policy_text"
+                    android:textSize="13sp"
+                    android:textColor="@color/text_secondary_light"
+                    android:lineSpacingExtra="4dp"/>
+            </ScrollView>
+
+            <!-- Consent Checkbox -->
+            <com.google.android.material.checkbox.MaterialCheckBox
+                android:id="@+id/cbPrivacyConsent"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="FamilyOne - это современное приложение для создания семейного древа"
-                android:textSize="16sp"
-                android:textColor="@color/text_secondary_light"
-                android:gravity="center"
-                android:lineSpacingExtra="4dp"/>
+                android:text="Я прочитал(а) и принимаю политику конфиденциальности"
+                android:textColor="@color/text_primary_light"
+                android:textSize="14sp"
+                android:buttonTint="@color/purple_button"/>
 
         </LinearLayout>
 

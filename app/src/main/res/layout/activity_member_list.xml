@@ -11,6 +11,8 @@
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        app:cardElevation="0dp"
+        app:strokeWidth="0dp"
         app:cardBackgroundColor="@color/transparent">
 
         <LinearLayout
@@ -72,7 +74,7 @@
                 app:cardElevation="0dp"
                 app:strokeWidth="0dp"
                 app:strokeColor="@android:color/transparent"
-                app:cardBackgroundColor="@color/white">
+                app:cardBackgroundColor="@color/search_background">
 
                 <LinearLayout
                     android:layout_width="match_parent"

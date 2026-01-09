@@ -56,7 +56,7 @@ class SettingsActivity : AppCompatActivity() {
         }
         
         // === ЕДИНЫЙ URL сервера (Face Recognition + PDF на одном порту) ===
-        val savedServerUrl = notificationPrefs.getString("server_url", "http://10.0.2.2:5000")
+        val savedServerUrl = notificationPrefs.getString("server_url", "https://api.totalcode.online")
         binding.etFaceServerUrl.setText(savedServerUrl)
         
         // При изменении Face URL сохраняем как единый server_url

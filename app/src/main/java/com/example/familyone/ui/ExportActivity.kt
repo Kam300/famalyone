@@ -18,6 +18,7 @@ import com.example.familyone.R
 import com.example.familyone.data.FamilyMember
 import com.example.familyone.databinding.ActivityExportBinding
 import com.example.familyone.utils.DataImportExport
+import com.example.familyone.utils.ExportResult
 import com.example.familyone.utils.PdfExporter
 import com.example.familyone.utils.PdfPageFormat
 import com.example.familyone.utils.toast
@@ -184,18 +185,65 @@ class ExportActivity : AppCompatActivity() {
         
         lifecycleScope.launch {
             try {
-                val pdfFile = PdfExporter.exportFamilyTree(this@ExportActivity, members, format, serverUrl)
+                val result = PdfExporter.exportFamilyTree(this@ExportActivity, members, format, serverUrl)
                 
-                if (pdfFile != null && pdfFile.exists()) {
-                    toast(getString(R.string.export_success))
-                    showOpenPdfDialog(pdfFile)
-                } else {
-                    toast(getString(R.string.export_error))
+                when (result) {
+                    is ExportResult.LocalFile -> {
+                        if (result.file.exists()) {
+                            toast(getString(R.string.export_success))
+                            showOpenPdfDialog(result.file)
+                        } else {
+                            toast(getString(R.string.export_error))
+                        }
+                    }
+                    is ExportResult.DriveUrl -> {
+                        toast(getString(R.string.export_success))
+                        showDriveDownloadDialog(result.downloadUrl, result.filename)
+                    }
+                    null -> {
+                        toast(getString(R.string.export_error))
+                    }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
                 toast(getString(R.string.export_error) + ": ${e.message}")
             }
+        }
+    }
+    
+    private fun showDriveDownloadDialog(downloadUrl: String, filename: String) {
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setTitle("PDF создан")
+            .setMessage("Файл загружен в Google Drive:\n$filename\n\nСкачать файл?")
+            .setPositiveButton("Скачать") { _, _ ->
+                openDriveUrl(downloadUrl)
+            }
+            .setNegativeButton("Поделиться") { _, _ ->
+                shareDriveUrl(downloadUrl, filename)
+            }
+            .setNeutralButton("Закрыть", null)
+            .show()
+    }
+    
+    private fun openDriveUrl(downloadUrl: String) {
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(downloadUrl))
+            startActivity(intent)
+        } catch (e: Exception) {
+            toast("Не удалось открыть ссылку: ${e.message}")
+        }
+    }
+    
+    private fun shareDriveUrl(downloadUrl: String, filename: String) {
+        try {
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_SUBJECT, "Семейное Древо - $filename")
+                putExtra(Intent.EXTRA_TEXT, "Скачать PDF: $downloadUrl")
+            }
+            startActivity(Intent.createChooser(intent, "Поделиться ссылкой"))
+        } catch (e: Exception) {
+            toast("Не удалось поделиться: ${e.message}")
         }
     }
     

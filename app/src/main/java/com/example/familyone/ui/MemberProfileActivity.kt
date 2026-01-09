@@ -108,7 +108,7 @@ class MemberProfileActivity : AppCompatActivity() {
                     }
                     
                     it.phoneNumber?.let { phone ->
-                        binding.tvPhone.text = "📱 $phone"
+                        binding.tvPhone.text = "Тел: $phone"
                         binding.tvPhone.visibility = View.VISIBLE
                         
                         // Показываем кнопки связи
@@ -117,7 +117,7 @@ class MemberProfileActivity : AppCompatActivity() {
                     }
                     
                     it.weddingDate?.let { wedding ->
-                        binding.tvWedding.text = "💍 Свадьба: $wedding"
+                        binding.tvWedding.text = "Свадьба: $wedding"
                         binding.tvWedding.visibility = View.VISIBLE
                     }
                     
@@ -128,7 +128,7 @@ class MemberProfileActivity : AppCompatActivity() {
                             .load(java.io.File(photoPath))
                             .placeholder(R.mipmap.ic_launcher)
                             .error(R.mipmap.ic_launcher)
-                            .centerCrop()
+                            .circleCrop()
                             .into(binding.ivProfilePhoto)
                     }
                 }

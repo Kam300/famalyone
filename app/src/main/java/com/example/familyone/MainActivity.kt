@@ -14,6 +14,7 @@ import com.example.familyone.databinding.ActivityMainBinding
 import com.example.familyone.ui.*
 import com.example.familyone.utils.NotificationHelper
 import com.example.familyone.workers.NotificationWorker
+import android.view.animation.AnimationUtils
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 
@@ -151,6 +152,12 @@ class MainActivity : AppCompatActivity() {
         binding.btnAbout.setOnClickListener {
             startActivity(Intent(this, AboutActivity::class.java))
             overridePendingTransition(R.anim.slide_in_right, R.anim.fade_out)
+        }
+        
+        // Анимация логотипа при нажатии
+        binding.cardLogo.setOnClickListener {
+            val spinAnim = AnimationUtils.loadAnimation(this, R.anim.logo_spin)
+            binding.cardLogo.startAnimation(spinAnim)
         }
     }
 }

@@ -24,4 +24,15 @@
     <!-- Цвета для поиска -->
     <color name="gray_text">#8B8B9E</color>
     <color name="dark_text">#E8E8F0</color>
+    
+    <!-- Фон кнопок в карточках -->
+    <color name="bg_section">#2A2A3D</color>
+    <color name="error_bg">#3D2A2A</color>
+    
+    <!-- Фон поля поиска -->
+    <color name="search_background">#252538</color>
+    
+    <!-- Статусные цвета для темной темы -->
+    <color name="success_bg">#1E2D1E</color>
+    <color name="warning_bg">#2D2A1E</color>
 </resources>

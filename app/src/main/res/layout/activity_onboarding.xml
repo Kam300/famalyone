@@ -13,21 +13,14 @@
         android:layout_height="0dp"
         android:layout_weight="1"/>
 
-    <!-- Indicators -->
-    <com.google.android.material.tabs.TabLayout
-        android:id="@+id/tabLayout"
+    <!-- Indicators - Custom dots -->
+    <LinearLayout
+        android:id="@+id/dotsLayout"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:layout_marginBottom="24dp"
-        android:background="@android:color/transparent"
-        app:tabBackground="@drawable/tab_selector"
-        app:tabGravity="center"
-        app:tabIndicatorHeight="0dp"
-        app:tabMaxWidth="16dp"
-        app:tabMinWidth="16dp"
-        app:tabPaddingStart="4dp"
-        app:tabPaddingEnd="4dp"/>
+        android:orientation="horizontal"/>
 
     <!-- Buttons -->
     <LinearLayout

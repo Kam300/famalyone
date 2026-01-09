@@ -9,19 +9,6 @@
         <item name="cardCornerRadius">20dp</item>
     </style>
     
-    <!-- Стиль для полей ввода в темной теме -->
-    <style name="RoundedEditText" parent="Widget.Material3.TextInputLayout.OutlinedBox">
-        <item name="boxBackgroundColor">@color/input_background_dark</item>
-        <item name="boxStrokeColor">@color/input_stroke_dark</item>
-        <item name="boxStrokeWidth">1dp</item>
-        <item name="boxCornerRadiusTopStart">16dp</item>
-        <item name="boxCornerRadiusTopEnd">16dp</item>
-        <item name="boxCornerRadiusBottomStart">16dp</item>
-        <item name="boxCornerRadiusBottomEnd">16dp</item>
-        <item name="hintTextColor">@color/text_secondary_dark</item>
-        <item name="android:textColorHint">@color/text_tertiary_dark</item>
-    </style>
-    
     <!-- Стиль для диалогов в темной теме -->
     <style name="ModernDialog.Dark" parent="ThemeOverlay.Material3.MaterialAlertDialog">
         <item name="backgroundTint">@color/dialog_background_dark</item>
