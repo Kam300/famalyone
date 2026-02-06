@@ -1,9 +1,18 @@
 package com.example.familyone.data
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "family_members")
+@Entity(
+    tableName = "family_members",
+    indices = [
+        Index(value = ["lastName"]),
+        Index(value = ["role"]),
+        Index(value = ["fatherId"]),
+        Index(value = ["motherId"])
+    ]
+)
 data class FamilyMember(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,

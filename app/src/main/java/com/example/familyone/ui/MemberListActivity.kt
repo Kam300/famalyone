@@ -1,18 +1,22 @@
 package com.example.familyone.ui
 
-import android.content .Intent
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.widget.addTextChangedListener
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.familyone.R
 import com.example.familyone.databinding.ActivityMemberListBinding
 import com.example.familyone.utils.toast
 import com.example.familyone.utils.toLocalizedString
 import com.example.familyone.viewmodel.FamilyViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class MemberListActivity : AppCompatActivity() {
     
@@ -20,6 +24,7 @@ class MemberListActivity : AppCompatActivity() {
     private lateinit var viewModel: FamilyViewModel
     private lateinit var adapter: MemberAdapter
     private var allMembers: List<com.example.familyone.data.FamilyMember> = emptyList()
+    private var searchJob: Job? = null
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,6 +61,7 @@ class MemberListActivity : AppCompatActivity() {
         
         binding.rvMembers.layoutManager = LinearLayoutManager(this)
         binding.rvMembers.adapter = adapter
+        binding.rvMembers.setHasFixedSize(true)
     }
     
     private fun setupClickListeners() {
@@ -68,9 +74,13 @@ class MemberListActivity : AppCompatActivity() {
             showDeleteAllConfirmation()
         }
         
-        // Search functionality
+        // Search functionality with debounce
         binding.etSearch.addTextChangedListener { text ->
-            filterMembers(text.toString())
+            searchJob?.cancel()
+            searchJob = lifecycleScope.launch {
+                delay(300) // Debounce 300ms
+                filterMembers(text.toString())
+            }
         }
     }
     

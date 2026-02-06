@@ -9,12 +9,16 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.lifecycleScope
 import androidx.work.*
 import com.example.familyone.databinding.ActivityMainBinding
 import com.example.familyone.ui.*
+import com.example.familyone.utils.BiometricHelper
 import com.example.familyone.utils.NotificationHelper
+import com.example.familyone.widget.BirthdayWidgetProvider
 import com.example.familyone.workers.NotificationWorker
 import android.view.animation.AnimationUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 
@@ -22,6 +26,7 @@ class MainActivity : AppCompatActivity() {
     
     private lateinit var binding: ActivityMainBinding
     private val NOTIFICATION_PERMISSION_CODE = 100
+    private var isAuthenticated = false
     
     override fun onCreate(savedInstanceState: Bundle?) {
         // Install splash screen
@@ -39,6 +44,43 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         
+        // Проверяем биометрию при запуске
+        checkBiometricAuth()
+    }
+    
+    override fun onResume() {
+        super.onResume()
+        // Обновляем виджет при возвращении в приложение
+        BirthdayWidgetProvider.updateWidgets(this)
+    }
+    
+    private fun checkBiometricAuth() {
+        if (BiometricHelper.isEnabled(this) && !isAuthenticated) {
+            BiometricHelper.showPrompt(
+                activity = this,
+                title = getString(R.string.biometric_title),
+                subtitle = getString(R.string.biometric_subtitle),
+                negativeButtonText = getString(R.string.biometric_cancel),
+                onSuccess = {
+                    isAuthenticated = true
+                    initializeApp()
+                },
+                onError = { _ ->
+                    // Показываем повторно при ошибке
+                    checkBiometricAuth()
+                },
+                onCancel = {
+                    // Закрываем приложение если отменили
+                    finish()
+                }
+            )
+        } else {
+            isAuthenticated = true
+            initializeApp()
+        }
+    }
+    
+    private fun initializeApp() {
         // Инициализация уведомлений
         NotificationHelper.createNotificationChannel(this)
         requestNotificationPermission()
@@ -70,7 +112,7 @@ class MainActivity : AppCompatActivity() {
     
     private fun scheduleNotificationWorker() {
         // Запускаем в фоновом потоке, чтобы не блокировать UI
-        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+        lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val prefs = getSharedPreferences("app_settings", MODE_PRIVATE)
                 val notificationsEnabled = prefs.getBoolean("notifications_enabled", true)

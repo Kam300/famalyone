@@ -11,6 +11,7 @@ import androidx.viewpager2.widget.ViewPager2
 import com.example.familyone.MainActivity
 import com.example.familyone.R
 import com.example.familyone.databinding.ActivityOnboardingBinding
+import com.example.familyone.utils.BiometricHelper
 import com.example.familyone.utils.toast
 
 class OnboardingActivity : AppCompatActivity() {
@@ -19,6 +20,7 @@ class OnboardingActivity : AppCompatActivity() {
     private lateinit var adapter: OnboardingAdapter
     private val dots = mutableListOf<ImageView>()
     private var privacyConsented = false
+    private var biometricEnabled = false
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -30,10 +32,15 @@ class OnboardingActivity : AppCompatActivity() {
     }
     
     private fun setupViewPager() {
-        adapter = OnboardingAdapter { isConsented ->
-            privacyConsented = isConsented
-            updateButtonState()
-        }
+        adapter = OnboardingAdapter(
+            onPrivacyConsentChanged = { isConsented ->
+                privacyConsented = isConsented
+                updateButtonState()
+            },
+            onBiometricEnabledChanged = { isEnabled ->
+                biometricEnabled = isEnabled
+            }
+        )
         binding.viewPager.adapter = adapter
         
         // Создаём точки
@@ -131,6 +138,11 @@ class OnboardingActivity : AppCompatActivity() {
             .putBoolean("onboarding_completed", true)
             .putBoolean("privacy_consented", true)
             .apply()
+        
+        // Сохраняем настройку биометрии
+        if (biometricEnabled) {
+            BiometricHelper.setEnabled(this, true)
+        }
         
         // Переходим на главный экран
         startActivity(Intent(this, MainActivity::class.java))

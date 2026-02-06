@@ -9,14 +9,16 @@ import android.os.Build
 import androidx.core.content.ContextCompat
 import com.example.familyone.data.FamilyDatabase
 import com.example.familyone.utils.NotificationHelper
-import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
 class DailyNotificationReceiver : BroadcastReceiver() {
     
+    @OptIn(DelicateCoroutinesApi::class)
     override fun onReceive(context: Context, intent: Intent) {
         // Используем goAsync для асинхронной работы
         val pendingResult = goAsync()
@@ -28,7 +30,7 @@ class DailyNotificationReceiver : BroadcastReceiver() {
                     Manifest.permission.POST_NOTIFICATIONS
                 ) != PackageManager.PERMISSION_GRANTED
             ) {
-                pendingResult.finish()
+                pendingResult?.finish()
                 return
             }
         }
@@ -41,12 +43,12 @@ class DailyNotificationReceiver : BroadcastReceiver() {
         val reminderDaysBefore = prefs.getInt("reminder_days_before", 3)
         
         if (!notificationsEnabled) {
-            pendingResult.finish()
+            pendingResult?.finish()
             return
         }
         
-        // Выполняем работу в фоновом потоке
-        CoroutineScope(Dispatchers.IO).launch {
+        // Выполняем работу в фоновом потоке с GlobalScope для корректной работы с goAsync
+        GlobalScope.launch(Dispatchers.IO) {
             try {
                 val database = FamilyDatabase.getDatabase(context)
                 val members = database.familyMemberDao().getAllMembersSync()
@@ -68,8 +70,12 @@ class DailyNotificationReceiver : BroadcastReceiver() {
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {
-                // Завершаем BroadcastReceiver
-                pendingResult.finish()
+                // Завершаем BroadcastReceiver - безопасная проверка на null
+                try {
+                    pendingResult?.finish()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
             }
         }
     }

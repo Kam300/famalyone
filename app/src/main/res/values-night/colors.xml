@@ -9,24 +9,31 @@
     <color name="dialog_background_purple">#252535</color>
     
     <!-- Цвета для полей ввода -->
+    <color name="input_background">#1E1E2D</color>
     <color name="input_background_dark">#1E1E2D</color>
-    <color name="input_stroke_dark">#2D2D40</color>
+    <color name="input_stroke">#3D3D50</color>
+    <color name="input_stroke_dark">#3D3D50</color>
     
     <!-- Цвета для диалогов -->
     <color name="dialog_background_dark">#1E1E2D</color>
     <color name="dialog_surface_dark">#252535</color>
-    <color name="text_primary_light">#E8E8F0</color>
+    
+    <!-- Текстовые цвета для темной темы -->
+    <color name="text_primary_light">#F0F0F5</color>
     <color name="text_secondary_light">#B8B8D1</color>
+    <color name="text_tertiary_light">#8B8B9E</color>
     
     <!-- Улучшенная контрастность для темной темы -->
-    <color name="divider">#2D2D40</color>
+    <color name="divider">#3D3D50</color>
     
     <!-- Цвета для поиска -->
-    <color name="gray_text">#8B8B9E</color>
-    <color name="dark_text">#E8E8F0</color>
+    <color name="gray_text">#9090A5</color>
+    <color name="dark_text">#F0F0F5</color>
     
     <!-- Фон кнопок в карточках -->
-    <color name="bg_section">#2A2A3D</color>
+    <color name="bg_section">#252538</color>
+    <color name="bg_elevated">#1E1E2D</color>
+    <color name="bg_pressed">#353550</color>
     <color name="error_bg">#3D2A2A</color>
     
     <!-- Фон поля поиска -->
@@ -34,5 +41,15 @@
     
     <!-- Статусные цвета для темной темы -->
     <color name="success_bg">#1E2D1E</color>
+    <color name="success_text">#6AD17E</color>
     <color name="warning_bg">#2D2A1E</color>
+    <color name="warning_text">#FFB74D</color>
+    <color name="error_text">#FF6B6B</color>
+    
+    <!-- Switch colors for dark theme - more visible -->
+    <color name="switch_thumb_dark">#FFFFFF</color>
+    <color name="switch_track_dark">#5A52D5</color>
+    <color name="switch_thumb_unchecked_dark">#9090A5</color>
+    <color name="switch_track_unchecked_dark">#4A4A5E</color>
 </resources>
+

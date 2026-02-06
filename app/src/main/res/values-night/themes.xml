@@ -1,7 +1,7 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Dark Theme -->
     <style name="Base.Theme.FamilyOne" parent="Theme.Material3.Dark.NoActionBar">
-        <item name="colorPrimary">@color/surface_dark</item>
+        <item name="colorPrimary">@color/purple_button_light</item>
         <item name="colorOnPrimary">@color/white</item>
         <item name="colorPrimaryContainer">@color/card_dark</item>
         <item name="colorSecondary">@color/purple_button_light</item>
@@ -21,6 +21,9 @@
         <item name="alertDialogTheme">@style/ModernDialog.Dark</item>
         <item name="materialAlertDialogTheme">@style/ModernDialog.Dark</item>
         <item name="textInputStyle">@style/ModernEditText</item>
+        <!-- Яркие цвета для переключателей -->
+        <item name="colorControlActivated">@color/purple_button_light</item>
+        <item name="colorSwitchThumbNormal">@color/white</item>
     </style>
     
     <!-- Splash Screen Theme for Dark -->
@@ -79,5 +82,16 @@
         <item name="boxStrokeColor">@color/purple_button_light</item>
         <item name="boxBackgroundColor">@color/surface_dark</item>
         <item name="hintTextColor">@color/text_secondary_dark</item>
+    </style>
+    
+    <!-- Enhanced Switch Style for Dark Theme -->
+    <style name="Widget.FamilyOne.Switch" parent="Widget.Material3.CompoundButton.MaterialSwitch">
+        <item name="thumbTint">@color/switch_thumb_color</item>
+        <item name="trackTint">@color/switch_track_color</item>
+    </style>
+    
+    <style name="Widget.FamilyOne.Switch.Dark" parent="Widget.Material3.CompoundButton.MaterialSwitch">
+        <item name="thumbTint">@color/switch_thumb_color</item>
+        <item name="trackTint">@color/switch_track_color</item>
     </style>
 </resources>

@@ -1,26 +1,36 @@
 package com.example.familyone.ui
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
+import androidx.biometric.BiometricManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.familyone.R
 import com.example.familyone.databinding.ItemOnboardingBinding
+import com.example.familyone.databinding.ItemOnboardingBiometricBinding
 import com.example.familyone.databinding.ItemOnboardingPrivacyBinding
+import com.example.familyone.utils.BiometricHelper
 
 data class OnboardingPage(
     val title: String,
     val description: String,
     val iconRes: Int,
-    val isPrivacyPage: Boolean = false
+    val pageType: PageType = PageType.NORMAL
 )
 
+enum class PageType {
+    NORMAL, BIOMETRIC, PRIVACY
+}
+
 class OnboardingAdapter(
-    private val onPrivacyConsentChanged: ((Boolean) -> Unit)? = null
+    private val onPrivacyConsentChanged: ((Boolean) -> Unit)? = null,
+    private val onBiometricEnabledChanged: ((Boolean) -> Unit)? = null
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     
     companion object {
         private const val VIEW_TYPE_NORMAL = 0
         private const val VIEW_TYPE_PRIVACY = 1
+        private const val VIEW_TYPE_BIOMETRIC = 2
     }
     
     private val pages = listOf(
@@ -50,15 +60,25 @@ class OnboardingAdapter(
             iconRes = R.drawable.ic_phone
         ),
         OnboardingPage(
+            title = "Защита приложения",
+            description = "",
+            iconRes = R.drawable.ic_fingerprint,
+            pageType = PageType.BIOMETRIC
+        ),
+        OnboardingPage(
             title = "Политика конфиденциальности",
             description = "",
             iconRes = R.drawable.ic_info,
-            isPrivacyPage = true
+            pageType = PageType.PRIVACY
         )
     )
     
     override fun getItemViewType(position: Int): Int {
-        return if (pages[position].isPrivacyPage) VIEW_TYPE_PRIVACY else VIEW_TYPE_NORMAL
+        return when (pages[position].pageType) {
+            PageType.PRIVACY -> VIEW_TYPE_PRIVACY
+            PageType.BIOMETRIC -> VIEW_TYPE_BIOMETRIC
+            else -> VIEW_TYPE_NORMAL
+        }
     }
     
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
@@ -70,6 +90,14 @@ class OnboardingAdapter(
                     false
                 )
                 PrivacyViewHolder(binding, onPrivacyConsentChanged)
+            }
+            VIEW_TYPE_BIOMETRIC -> {
+                val binding = ItemOnboardingBiometricBinding.inflate(
+                    LayoutInflater.from(parent.context),
+                    parent,
+                    false
+                )
+                BiometricViewHolder(binding, onBiometricEnabledChanged)
             }
             else -> {
                 val binding = ItemOnboardingBinding.inflate(
@@ -86,6 +114,7 @@ class OnboardingAdapter(
         when (holder) {
             is OnboardingViewHolder -> holder.bind(pages[position])
             is PrivacyViewHolder -> holder.bind()
+            is BiometricViewHolder -> holder.bind()
         }
     }
     
@@ -113,4 +142,28 @@ class OnboardingAdapter(
             }
         }
     }
+    
+    class BiometricViewHolder(
+        private val binding: ItemOnboardingBiometricBinding,
+        private val onBiometricChanged: ((Boolean) -> Unit)?
+    ) : RecyclerView.ViewHolder(binding.root) {
+        
+        fun bind() {
+            val context = binding.root.context
+            
+            // Check if biometric is available
+            val canAuth = BiometricHelper.canAuthenticate(context)
+            
+            if (canAuth != BiometricManager.BIOMETRIC_SUCCESS) {
+                binding.switchBiometric.isEnabled = false
+                binding.tvBiometricStatus.visibility = View.VISIBLE
+                binding.tvBiometricStatus.text = BiometricHelper.getStatusMessage(context)
+            }
+            
+            binding.switchBiometric.setOnCheckedChangeListener { _, isChecked ->
+                onBiometricChanged?.invoke(isChecked)
+            }
+        }
+    }
 }
+

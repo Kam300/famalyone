@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Checked: яркий пурпурный track -->
+    <item android:color="#9D95FF" android:state_checked="true"/>
+    <!-- Unchecked: более светлый серый для видимости -->
+    <item android:color="#5A5A70"/>
+</selector>

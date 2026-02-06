@@ -2,24 +2,23 @@ package com.example.familyone.ui
 
 import android.app.TimePickerDialog
 import android.content.Context
-
+import android.content.Intent
 import android.os.Bundle
+import android.view.View
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
-
+import androidx.biometric.BiometricManager
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.familyone.R
 import com.example.familyone.databinding.ActivitySettingsBinding
-
+import com.example.familyone.utils.BiometricHelper
 import com.example.familyone.utils.ThemePreferences
 import com.example.familyone.utils.toast
-
 import com.example.familyone.workers.NotificationWorker
 import kotlinx.coroutines.launch
-
 import java.util.concurrent.TimeUnit
 
 class SettingsActivity : AppCompatActivity() {
@@ -40,6 +39,58 @@ class SettingsActivity : AppCompatActivity() {
         loadNotificationSettings()
         setupClickListeners()
         setupNotificationListeners()
+        setupBiometricToggle()
+    }
+    
+    private fun setupBiometricToggle() {
+        // Load current state
+        binding.switchBiometric.isChecked = BiometricHelper.isEnabled(this)
+        
+        // Check availability
+        val canAuth = BiometricHelper.canAuthenticate(this)
+        if (canAuth != BiometricManager.BIOMETRIC_SUCCESS) {
+            binding.tvBiometricStatus.visibility = View.VISIBLE
+            binding.tvBiometricStatus.text = BiometricHelper.getStatusMessage(this)
+            
+            // Disable switch if biometric not available
+            if (canAuth == BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE ||
+                canAuth == BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE) {
+                binding.switchBiometric.isEnabled = false
+            }
+        }
+        
+        binding.switchBiometric.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                // Verify biometric before enabling
+                if (BiometricHelper.isBiometricAvailable(this)) {
+                    BiometricHelper.showPrompt(
+                        activity = this,
+                        title = getString(R.string.biometric_title),
+                        subtitle = "Подтвердите для включения защиты",
+                        negativeButtonText = getString(R.string.biometric_cancel),
+                        onSuccess = {
+                            BiometricHelper.setEnabled(this, true)
+                            toast("✓ Биометрическая защита включена")
+                        },
+                        onError = { error ->
+                            binding.switchBiometric.isChecked = false
+                            toast("Ошибка: $error")
+                        },
+                        onCancel = {
+                            binding.switchBiometric.isChecked = false
+                        }
+                    )
+                } else {
+                    binding.switchBiometric.isChecked = false
+                    binding.tvBiometricStatus.visibility = View.VISIBLE
+                    binding.tvBiometricStatus.text = BiometricHelper.getStatusMessage(this)
+                    toast(BiometricHelper.getStatusMessage(this))
+                }
+            } else {
+                BiometricHelper.setEnabled(this, false)
+                toast("Биометрическая защита отключена")
+            }
+        }
     }
     
     private fun setupClickListeners() {
@@ -53,6 +104,10 @@ class SettingsActivity : AppCompatActivity() {
         
         binding.btnSetNotificationTime.setOnClickListener {
             showTimePickerDialog()
+        }
+        
+        binding.btnOpenBackup.setOnClickListener {
+            startActivity(Intent(this, BackupActivity::class.java))
         }
         
         // === ЕДИНЫЙ URL сервера (Face Recognition + PDF на одном порту) ===

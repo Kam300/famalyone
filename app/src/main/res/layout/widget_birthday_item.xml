@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/itemContainer"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:paddingVertical="6dp"
+    android:gravity="center_vertical">
+
+    <!-- Profile icon placeholder -->
+    <ImageView
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:src="@drawable/ic_person"
+        android:background="@drawable/circle_background"
+        android:padding="6dp"
+        android:contentDescription="Фото" />
+
+    <!-- Name -->
+    <TextView
+        android:id="@+id/tvName"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginStart="10dp"
+        android:text="Имя Фамилия"
+        android:textSize="14sp"
+        android:textColor="@color/white"
+        android:maxLines="1"
+        android:ellipsize="end" />
+
+    <!-- Days until -->
+    <TextView
+        android:id="@+id/tvDays"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="через 2 дня"
+        android:textSize="12sp"
+        android:textColor="@color/green_accent"
+        android:textStyle="bold" />
+
+</LinearLayout>

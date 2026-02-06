@@ -78,11 +78,13 @@ class MemberAdapter(
                 binding.layoutWeddingDate.visibility = View.GONE
             }
             
-            // Load photo
+            // Load photo with optimized Glide settings
             if (!member.photoUri.isNullOrEmpty()) {
                 val photoPath = member.photoUri!!.replace("file://", "")
                 Glide.with(binding.root.context)
                     .load(java.io.File(photoPath))
+                    .override(150, 150) // Thumbnail size for list
+                    .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.ALL)
                     .placeholder(R.mipmap.ic_launcher)
                     .error(R.mipmap.ic_launcher)
                     .centerCrop()
