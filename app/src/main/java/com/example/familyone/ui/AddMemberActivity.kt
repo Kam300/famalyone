@@ -749,7 +749,7 @@ class AddMemberActivity : AppCompatActivity() {
         
         // Ð˜Ð½Ð¸Ñ†Ð¸Ð°Ð»Ð¸Ð·Ð¸Ñ€ÑƒÐµÐ¼ URL ÑÐµÑ€Ð²ÐµÑ€Ð° Ð¸Ð· Ð½Ð°ÑÑ‚Ñ€Ð¾ÐµÐº
         val prefs = getSharedPreferences("app_settings", MODE_PRIVATE)
-        val serverUrl = prefs.getString("face_server_url", "https://totalcode.indevs.in") ?: "https://totalcode.indevs.in"
+        val serverUrl = com.example.familyone.utils.ApiServerConfig.readUnifiedServerUrl(prefs)
         com.example.familyone.api.FaceRecognitionApi.setServerUrl(serverUrl)
         
         // Ð¡Ð¾Ð·Ð´Ð°ÐµÐ¼ ÑƒÐ½Ð¸ÐºÐ°Ð»ÑŒÐ½Ñ‹Ð¹ ID Ð´Ð»Ñ ÑÐµÑ€Ð²ÐµÑ€Ð° (device_id + member_id)
@@ -794,6 +794,8 @@ class AddMemberActivity : AppCompatActivity() {
     
     private fun showPhotoErrorDialog(errorMessage: String) {
         val message = when {
+            errorMessage.contains("Route mismatch", ignoreCase = true) || errorMessage.contains("HTTP 405", ignoreCase = true) || errorMessage.contains("HTTP 404", ignoreCase = true) ->
+                "Ñåðâåð íå ïîääåðæèâàåò ìàðøðóò ðåãèñòðàöèè ëèöà ïî òåêóùåìó URL.\n\nÏðîâåðüòå àäðåñ ñåðâåðà â íàñòðîéêàõ (ðåêîìåíäóåòñÿ .../api) èëè çàïóñòèòå ñåðâåð ñ endpoint'îì /register_face."
             errorMessage.contains("Ð½ÐµÑÐºÐ¾Ð»ÑŒÐºÐ¾ Ð»Ð¸Ñ†", ignoreCase = true) -> 
                 "ÐÐ° Ð²Ñ‹Ð±Ñ€Ð°Ð½Ð½Ð¾Ð¼ Ñ„Ð¾Ñ‚Ð¾ Ð¾Ð±Ð½Ð°Ñ€ÑƒÐ¶ÐµÐ½Ð¾ Ð½ÐµÑÐºÐ¾Ð»ÑŒÐºÐ¾ Ð»Ð¸Ñ†.\n\nÐ”Ð»Ñ Ñ€ÐµÐ³Ð¸ÑÑ‚Ñ€Ð°Ñ†Ð¸Ð¸ Ð² ÑÐ¸ÑÑ‚ÐµÐ¼Ðµ Ñ€Ð°ÑÐ¿Ð¾Ð·Ð½Ð°Ð²Ð°Ð½Ð¸Ñ Ð¸ÑÐ¿Ð¾Ð»ÑŒÐ·ÑƒÐ¹Ñ‚Ðµ Ñ„Ð¾Ñ‚Ð¾ Ñ Ð¾Ð´Ð½Ð¸Ð¼ Ñ‡ÐµÐ»Ð¾Ð²ÐµÐºÐ¾Ð¼."
             errorMessage.contains("Ð½Ðµ Ð½Ð°Ð¹Ð´ÐµÐ½Ð¾ Ð»Ð¸Ñ†", ignoreCase = true) || errorMessage.contains("no faces", ignoreCase = true) ->

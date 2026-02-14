@@ -4,7 +4,7 @@ Combined Server для приложения Семейное Древо
 БЕЗ ПОТЕРИ ФУНКЦИОНАЛЬНОСТИ
 """
 
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify, send_file, Response
 from flask_cors import CORS
 import face_recognition
 import numpy as np
@@ -16,6 +16,20 @@ import json
 import logging
 from datetime import datetime
 import time
+import pickle
+from pathlib import Path
+
+# Google Drive imports
+try:
+    from google.oauth2.credentials import Credentials
+    from google_auth_oauthlib.flow import InstalledAppFlow
+    from google.auth.transport.requests import Request
+    from googleapiclient.discovery import build
+    from googleapiclient.http import MediaFileUpload
+    GOOGLE_DRIVE_AVAILABLE = True
+except ImportError:
+    GOOGLE_DRIVE_AVAILABLE = False
+    logging.warning("Google Drive API не установлен. Используйте: pip install google-api-python-client google-auth-oauthlib")
 
 # PDF imports
 from reportlab.lib import colors
@@ -25,17 +39,97 @@ from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
-app = Flask(__name__)
-CORS(app)
-
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+BASE_DIR = Path(__file__).resolve().parent
+
+
+def load_env_file(env_path):
+    """Загружает .env без внешних зависимостей."""
+    if not env_path.exists():
+        return
+
+    for raw_line in env_path.read_text(encoding='utf-8').splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith('#') or '=' not in line:
+            continue
+        key, value = line.split('=', 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key:
+            os.environ.setdefault(key, value)
+
+
+def env_int(name, default):
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        logger.warning(f"Некорректное значение {name}={raw!r}, используется {default}")
+        return default
+
+
+def resolve_backend_path(path_value):
+    path = Path(path_value)
+    if not path.is_absolute():
+        path = BASE_DIR / path
+    return str(path)
+
+
+load_env_file(BASE_DIR / '.env')
+
+API_HOST = os.environ.get('API_HOST', '127.0.0.1')
+API_PORT = env_int('API_PORT', 5000)
+PUBLIC_ORIGIN = os.environ.get('PUBLIC_ORIGIN', 'https://totalcode.indevs.in')
+MAX_CONTENT_LENGTH_MB = env_int('MAX_CONTENT_LENGTH_MB', 10)
+MAX_CONTENT_LENGTH_BYTES = MAX_CONTENT_LENGTH_MB * 1024 * 1024
+CORS_ORIGINS = [
+    PUBLIC_ORIGIN,
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'http://localhost:4173',
+    'http://127.0.0.1:4173',
+]
+
+app = Flask(__name__)
+app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH_BYTES
+CORS(app, resources={r'/*': {'origins': CORS_ORIGINS}})
+
+
+def make_response_json(data, status=200):
+    """
+    Создает JSON ответ с явным Content-Length.
+    Это исправляет проблему chunked encoding через Cloudflare Tunnel.
+    """
+    response_data = json.dumps(data, ensure_ascii=False)
+    return Response(
+        response_data,
+        status=status,
+        mimetype='application/json',
+        headers={'Content-Length': str(len(response_data.encode('utf-8')))}
+    )
 
 
 # ========================================
 # MIDDLEWARE для решения проблемы с ngrok
 # ========================================
+
+@app.before_request
+def log_request_info():
+    """Логируем детали каждого входящего запроса для отладки"""
+    logger.info(f"=== Входящий запрос ===")
+    logger.info(f"Метод: {request.method}")
+    logger.info(f"URL: {request.url}")
+    logger.info(f"Path: {request.path}")
+    logger.info(f"Headers: {dict(request.headers)}")
+    if request.method == 'POST':
+        logger.info(f"Content-Type: {request.content_type}")
+        logger.info(f"Content-Length: {request.content_length}")
+
 @app.after_request
 def after_request(response):
     """Добавляем заголовки для правильной работы с ngrok"""
@@ -50,9 +144,9 @@ def after_request(response):
 # ========================================
 # FACE RECOGNITION - Конфигурация
 # ========================================
-REFERENCE_PHOTOS_DIR = "reference_photos"
-UPLOADED_PHOTOS_DIR = "uploaded_photos"
-ENCODINGS_FILE = "face_encodings.json"
+REFERENCE_PHOTOS_DIR = str(BASE_DIR / 'reference_photos')
+UPLOADED_PHOTOS_DIR = str(BASE_DIR / 'uploaded_photos')
+ENCODINGS_FILE = str(BASE_DIR / 'face_encodings.json')
 
 os.makedirs(REFERENCE_PHOTOS_DIR, exist_ok=True)
 os.makedirs(UPLOADED_PHOTOS_DIR, exist_ok=True)
@@ -65,7 +159,7 @@ face_encodings_db = {}
 # Используем CNN модель для GPU ускорения (требуется dlib с CUDA)
 # 'cnn' - использует GPU (CUDA), более точный но требует GPU
 # 'hog' - использует CPU, быстрее на CPU но менее точный
-USE_CUDA = True  # Установите False если нет CUDA
+USE_CUDA = False  # Отключено для скорости (HOG быстрее на CPU)
 FACE_MODEL = 'cnn' if USE_CUDA else 'hog'
 
 # Количество раз для повышения разрешения при поиске лиц (0 = без увеличения)
@@ -76,11 +170,11 @@ NUMBER_OF_TIMES_TO_UPSAMPLE = 0
 # Количество jitters при кодировании лица (больше = точнее, но медленнее)
 # 1 = быстро, 100 = очень точно но медленно
 # Для GPU можно увеличить до 10-20 без потери скорости
-NUM_JITTERS = 10
+NUM_JITTERS = 1  # 1 = быстро, уменьшено для скорости
 
 # Дополнительные оптимизации для GPU
 BATCH_SIZE = 128  # Размер батча для обработки (больше = быстрее на GPU)
-MAX_IMAGE_SIZE = 800  # Максимальный размер изображения для обработки (уменьшено для скорости)
+MAX_IMAGE_SIZE = 400  # Уменьшено для быстрой обработки
 
 # Кэш для ускорения повторных запросов
 face_detection_cache = {}
@@ -91,7 +185,7 @@ logger.info(f"Face Recognition настроен: model={FACE_MODEL}, CUDA={'вк
 # ========================================
 # PDF - Конфигурация
 # ========================================
-TEMP_DIR = "temp_pdf"
+TEMP_DIR = str(BASE_DIR / 'temp_pdf')
 os.makedirs(TEMP_DIR, exist_ok=True)
 
 # Цвета
@@ -105,6 +199,149 @@ LINE_COLOR = (160/255, 140/255, 200/255)
 CARD_BORDER = (180/255, 160/255, 220/255)
 WHITE = (1, 1, 1)
 
+# ========================================
+# GOOGLE DRIVE - Конфигурация
+# ========================================
+GOOGLE_DRIVE_FOLDER_ID = os.environ.get('GOOGLE_DRIVE_FOLDER_ID', '1DuNnC5uQbAIsL3beihEoSc7SZOqcmiUf')
+GOOGLE_CREDENTIALS_FILE = resolve_backend_path(os.environ.get('GOOGLE_CREDENTIALS_FILE', 'oauth_credentials.json'))
+GOOGLE_TOKEN_FILE = resolve_backend_path(os.environ.get('GOOGLE_TOKEN_FILE', 'token.pickle'))
+GOOGLE_SCOPES = ['https://www.googleapis.com/auth/drive.file']
+
+# Кэшированный сервис Google Drive
+_google_drive_service = None
+
+
+def get_google_drive_service():
+    """
+    Получает авторизованный сервис Google Drive.
+    При первом запуске откроет браузер для авторизации.
+    """
+    global _google_drive_service
+    
+    if not GOOGLE_DRIVE_AVAILABLE:
+        logger.warning("Google Drive API не доступен")
+        return None
+    
+    if _google_drive_service is not None:
+        return _google_drive_service
+    
+    creds = None
+    
+    # Загружаем сохранённый токен
+    if os.path.exists(GOOGLE_TOKEN_FILE):
+        try:
+            with open(GOOGLE_TOKEN_FILE, 'rb') as token:
+                creds = pickle.load(token)
+        except Exception as e:
+            logger.warning(f"Ошибка загрузки токена: {e}")
+    
+    # Если токен невалидный - обновляем или запрашиваем новый
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            try:
+                creds.refresh(Request())
+                logger.info("Токен Google Drive обновлён")
+            except Exception as e:
+                logger.warning(f"Ошибка обновления токена: {e}")
+                creds = None
+        
+        if not creds:
+            if not os.path.exists(GOOGLE_CREDENTIALS_FILE):
+                logger.error(f"Файл {GOOGLE_CREDENTIALS_FILE} не найден!")
+                return None
+            
+            try:
+                flow = InstalledAppFlow.from_client_secrets_file(
+                    GOOGLE_CREDENTIALS_FILE, GOOGLE_SCOPES)
+                creds = flow.run_local_server(port=0, open_browser=True)
+                logger.info("Авторизация Google Drive успешна")
+            except Exception as e:
+                logger.error(f"Ошибка авторизации Google Drive: {e}")
+                return None
+        
+        # Сохраняем токен
+        try:
+            with open(GOOGLE_TOKEN_FILE, 'wb') as token:
+                pickle.dump(creds, token)
+            logger.info("Токен Google Drive сохранён")
+        except Exception as e:
+            logger.warning(f"Ошибка сохранения токена: {e}")
+    
+    try:
+        _google_drive_service = build('drive', 'v3', credentials=creds)
+        return _google_drive_service
+    except Exception as e:
+        logger.error(f"Ошибка создания сервиса Google Drive: {e}")
+        return None
+
+
+def upload_to_google_drive(filepath, filename, mimetype='application/pdf'):
+    """
+    Загружает файл в Google Drive и создаёт публичную ссылку.
+    
+    Args:
+        filepath: путь к локальному файлу
+        filename: имя файла для Drive
+        mimetype: MIME тип файла
+    
+    Returns:
+        dict с download_url и drive_id или None при ошибке
+    """
+    service = get_google_drive_service()
+    
+    if not service:
+        return None
+    
+    try:
+        # Метаданные файла
+        file_metadata = {
+            'name': filename,
+            'parents': [GOOGLE_DRIVE_FOLDER_ID] if GOOGLE_DRIVE_FOLDER_ID else []
+        }
+        
+        # Загружаем файл
+        media = MediaFileUpload(filepath, mimetype=mimetype, resumable=True)
+        file = service.files().create(
+            body=file_metadata,
+            media_body=media,
+            fields='id, webViewLink, webContentLink'
+        ).execute()
+        
+        file_id = file.get('id')
+        web_content_link = file.get('webContentLink')
+        
+        # Делаем файл публичным (anyone with link can view)
+        service.permissions().create(
+            fileId=file_id,
+            body={'type': 'anyone', 'role': 'reader'}
+        ).execute()
+        
+        # Используем webContentLink если есть, иначе формируем ссылку
+        # webContentLink - прямая ссылка на скачивание
+        if web_content_link:
+            download_url = web_content_link
+        else:
+            # Альтернативный формат для прямого скачивания
+            download_url = f"https://drive.google.com/uc?export=download&id={file_id}"
+        
+        # Дополнительная ссылка для просмотра в браузере
+        view_url = f"https://drive.google.com/file/d/{file_id}/view?usp=sharing"
+        
+        logger.info(f"Файл загружен в Google Drive: {filename} (ID: {file_id})")
+        logger.info(f"Download URL: {download_url}")
+        
+        return {
+            'drive_id': file_id,
+            'download_url': download_url,
+            'view_url': view_url,
+            'web_view_url': file.get('webViewLink')
+        }
+        
+    except Exception as e:
+        logger.error(f"Ошибка загрузки в Google Drive: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
 
 def setup_fonts():
     """Настройка шрифтов с поддержкой кириллицы"""
@@ -197,19 +434,19 @@ def get_image_hash(image_array):
 def optimize_image_for_gpu(image):
     """Оптимизирует изображение для обработки на GPU"""
     height, width = image.shape[:2]
-    
+
     # Уменьшаем изображение если оно слишком большое
     if max(width, height) > MAX_IMAGE_SIZE:
         ratio = MAX_IMAGE_SIZE / max(width, height)
         new_width = int(width * ratio)
         new_height = int(height * ratio)
-        
+
         # Используем PIL для качественного ресайза
         pil_image = Image.fromarray(image)
         pil_image = pil_image.resize((new_width, new_height), Image.LANCZOS)
         image = np.array(pil_image)
         logger.info(f"Изображение оптимизировано: {width}x{height} → {new_width}x{new_height}")
-    
+
     return image
 
 
@@ -220,27 +457,27 @@ def detect_faces_optimized(image):
     if img_hash in face_detection_cache:
         logger.info("Использован кэш для обнаружения лиц")
         return face_detection_cache[img_hash]
-    
+
     # Оптимизируем изображение
     optimized_image = optimize_image_for_gpu(image)
-    
+
     # Обнаруживаем лица
     start_time = time.time()
     face_locations = face_recognition.face_locations(
-        optimized_image, 
-        model=FACE_MODEL, 
+        optimized_image,
+        model=FACE_MODEL,
         number_of_times_to_upsample=NUMBER_OF_TIMES_TO_UPSAMPLE
     )
     detection_time = time.time() - start_time
-    
+
     logger.info(f"Обнаружение лиц: {detection_time:.3f}s, найдено: {len(face_locations)}")
-    
+
     # Сохраняем в кэш
     if len(face_detection_cache) >= CACHE_MAX_SIZE:
         # Удаляем старые записи
         oldest_key = next(iter(face_detection_cache))
         del face_detection_cache[oldest_key]
-    
+
     face_detection_cache[img_hash] = face_locations
     return face_locations
 
@@ -304,10 +541,11 @@ def decode_base64_image(base64_string):
 # ОБЩИЕ РОУТЫ
 # ========================================
 
+@app.route('/api/health', methods=['GET'])
 @app.route('/health', methods=['GET'])
 def health_check():
     """Проверка работоспособности сервера"""
-    return jsonify({
+    return make_response_json({
         'status': 'ok',
         'service': 'combined_server',
         'face_recognition': True,
@@ -320,6 +558,7 @@ def health_check():
 # FACE RECOGNITION - Роуты
 # ========================================
 
+@app.route('/api/register_face', methods=['POST'])
 @app.route('/register_face', methods=['POST'])
 def register_face():
     """
@@ -337,42 +576,42 @@ def register_face():
         image_base64 = data.get('image')
 
         if not all([member_id, member_name, image_base64]):
-            return jsonify({
+            return make_response_json({
                 'success': False,
                 'error': 'Отсутствуют обязательные параметры'
-            }), 400
+            }, 400)
 
         # Декодируем изображение
         image = decode_base64_image(image_base64)
         if image is None:
-            return jsonify({
+            return make_response_json({
                 'success': False,
                 'error': 'Не удалось декодировать изображение'
-            }), 400
+            }, 400)
 
         # Находим лица на изображении (используем оптимизированную функцию)
         face_locations = detect_faces_optimized(image)
 
         if len(face_locations) == 0:
-            return jsonify({
+            return make_response_json({
                 'success': False,
                 'error': 'На фото не обнаружено лиц'
-            }), 400
+            }, 400)
 
         if len(face_locations) > 1:
-            return jsonify({
+            return make_response_json({
                 'success': False,
                 'error': 'На фото обнаружено несколько лиц. Используйте фото с одним человеком'
-            }), 400
+            }, 400)
 
         # Получаем кодировку лица (num_jitters для точности)
         face_encodings = face_recognition.face_encodings(image, face_locations, num_jitters=NUM_JITTERS)
 
         if len(face_encodings) == 0:
-            return jsonify({
+            return make_response_json({
                 'success': False,
                 'error': 'Не удалось получить кодировку лица'
-            }), 400
+            }, 400)
 
         # Сохраняем кодировку
         face_encodings_db[str(member_id)] = {
@@ -389,7 +628,7 @@ def register_face():
 
         logger.info(f"Зарегистрировано лицо для {member_name} (ID: {member_id})")
 
-        return jsonify({
+        return make_response_json({
             'success': True,
             'message': f'Лицо {member_name} успешно зарегистрировано',
             'member_id': member_id
@@ -397,12 +636,13 @@ def register_face():
 
     except Exception as e:
         logger.error(f"Ошибка регистрации лица: {e}")
-        return jsonify({
+        return make_response_json({
             'success': False,
             'error': str(e)
-        }), 500
+        }, 500)
 
 
+@app.route('/api/recognize_face', methods=['POST'])
 @app.route('/recognize_face', methods=['POST'])
 def recognize_face():
     """
@@ -418,33 +658,33 @@ def recognize_face():
         threshold = data.get('threshold', 0.6)
 
         if not image_base64:
-            return jsonify({
+            return make_response_json({
                 'success': False,
                 'error': 'Отсутствует изображение'
-            }), 400
+            }, 400)
 
         if len(face_encodings_db) == 0:
-            return jsonify({
+            return make_response_json({
                 'success': False,
                 'error': 'Нет зарегистрированных лиц'
-            }), 400
+            }, 400)
 
         # Декодируем изображение
         image = decode_base64_image(image_base64)
         if image is None:
-            return jsonify({
+            return make_response_json({
                 'success': False,
                 'error': 'Не удалось декодировать изображение'
-            }), 400
+            }, 400)
 
         # Находим лица на изображении (используем оптимизированную функцию)
         face_locations = detect_faces_optimized(image)
 
         if len(face_locations) == 0:
-            return jsonify({
+            return make_response_json({
                 'success': False,
                 'error': 'На фото не обнаружено лиц'
-            }), 400
+            }, 400)
 
         # Получаем кодировки всех лиц на фото
         face_encodings = face_recognition.face_encodings(image, face_locations, num_jitters=NUM_JITTERS)
@@ -491,7 +731,7 @@ def recognize_face():
                     })
 
         if len(results) == 0:
-            return jsonify({
+            return make_response_json({
                 'success': False,
                 'error': 'Лица не распознаны. Возможно, этих людей нет в базе',
                 'faces_found': len(face_locations)
@@ -499,7 +739,7 @@ def recognize_face():
 
         logger.info(f"Распознано {len(results)} лиц")
 
-        return jsonify({
+        return make_response_json({
             'success': True,
             'faces_count': len(face_locations),
             'recognized_count': len(results),
@@ -508,21 +748,22 @@ def recognize_face():
 
     except Exception as e:
         logger.error(f"Ошибка распознавания: {e}")
-        return jsonify({
+        return make_response_json({
             'success': False,
             'error': str(e)
-        }), 500
+        }, 500)
 
 
+@app.route('/api/delete_face/<member_id>', methods=['DELETE'])
 @app.route('/delete_face/<member_id>', methods=['DELETE'])
 def delete_face(member_id):
     """Удаление эталонного фото члена семьи"""
     try:
         if str(member_id) not in face_encodings_db:
-            return jsonify({
+            return make_response_json({
                 'success': False,
                 'error': 'Член семьи не найден'
-            }), 404
+            }, 404)
 
         # Удаляем из базы
         del face_encodings_db[str(member_id)]
@@ -537,19 +778,20 @@ def delete_face(member_id):
 
         logger.info(f"Удалено лицо для ID: {member_id}")
 
-        return jsonify({
+        return make_response_json({
             'success': True,
             'message': 'Лицо успешно удалено'
         })
 
     except Exception as e:
         logger.error(f"Ошибка удаления: {e}")
-        return jsonify({
+        return make_response_json({
             'success': False,
             'error': str(e)
-        }), 500
+        }, 500)
 
 
+@app.route('/api/list_faces', methods=['GET'])
 @app.route('/list_faces', methods=['GET'])
 def list_faces():
     """Получение списка зарегистрированных лиц"""
@@ -562,7 +804,7 @@ def list_faces():
             for member_id, info in face_encodings_db.items()
         ]
 
-        return jsonify({
+        return make_response_json({
             'success': True,
             'count': len(faces),
             'faces': faces
@@ -570,12 +812,13 @@ def list_faces():
 
     except Exception as e:
         logger.error(f"Ошибка получения списка: {e}")
-        return jsonify({
+        return make_response_json({
             'success': False,
             'error': str(e)
-        }), 500
+        }, 500)
 
 
+@app.route('/api/clear_all', methods=['DELETE'])
 @app.route('/clear_all', methods=['DELETE'])
 def clear_all():
     """Очистка всей базы распознавания лиц"""
@@ -598,7 +841,7 @@ def clear_all():
 
         logger.info(f"База очищена. Удалено {count} лиц")
 
-        return jsonify({
+        return make_response_json({
             'success': True,
             'message': f'База очищена. Удалено {count} лиц',
             'deleted_count': count
@@ -606,25 +849,27 @@ def clear_all():
 
     except Exception as e:
         logger.error(f"Ошибка очистки базы: {e}")
-        return jsonify({
+        return make_response_json({
             'success': False,
             'error': str(e)
-        }), 500
+        }, 500)
 
 
 # ========================================
 # PDF GENERATION - Роуты
 # ========================================
 
+@app.route('/api/generate_pdf', methods=['POST'])
 @app.route('/generate_pdf', methods=['POST'])
 def generate_pdf():
     try:
         data = request.json
         members = data.get('members', [])
         page_format = data.get('format', 'A4_LANDSCAPE')
+        use_drive = data.get('use_drive', True)  # По умолчанию загружать в Drive
 
         if not members:
-            return jsonify({'success': False, 'error': 'Нет данных'}), 400
+            return make_response_json({'success': False, 'error': 'Нет данных'}, 400)
 
         if page_format == 'A4':
             pagesize = A4
@@ -648,14 +893,107 @@ def generate_pdf():
 
         c.save()
 
-        return send_file(filepath, mimetype='application/pdf',
-                        as_attachment=True, download_name=filename)
+        # Получаем размер файла
+        pdf_size = os.path.getsize(filepath)
+        logger.info(f"PDF создан: {filename}, размер: {pdf_size} байт")
+
+        # Пробуем загрузить в Google Drive
+        if use_drive and GOOGLE_DRIVE_AVAILABLE:
+            drive_result = upload_to_google_drive(filepath, filename)
+            
+            if drive_result:
+                # Успешно загружено в Drive
+                drive_id = drive_result['drive_id']
+                # Прокси ссылка через наш сервер (обходит перехват Android)
+                proxy_download_url = f"/download_pdf/{drive_id}"
+                
+                return make_response_json({
+                    'success': True,
+                    'filename': filename,
+                    'download_url': proxy_download_url,  # Прокси через сервер
+                    'direct_drive_url': drive_result['download_url'],  # Прямая ссылка Drive
+                    'drive_id': drive_id,
+                    'view_url': drive_result.get('view_url'),
+                    'size': pdf_size,
+                    'storage': 'google_drive'
+                })
+            else:
+                logger.warning("Google Drive загрузка не удалась, возвращаем base64")
+
+        # Fallback: возвращаем как base64
+        with open(filepath, 'rb') as f:
+            pdf_data = f.read()
+
+        pdf_base64 = base64.b64encode(pdf_data).decode('utf-8')
+
+        logger.info(f"Возвращаем PDF как base64: {len(pdf_base64)} символов")
+
+        return make_response_json({
+            'success': True,
+            'filename': filename,
+            'pdf_base64': pdf_base64,
+            'size': pdf_size,
+            'storage': 'base64'
+        })
 
     except Exception as e:
         logger.error(f"Ошибка: {e}")
         import traceback
         traceback.print_exc()
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return make_response_json({'success': False, 'error': str(e)}, 500)
+
+
+@app.route('/api/download_pdf/<drive_id>', methods=['GET'])
+@app.route('/download_pdf/<drive_id>', methods=['GET'])
+def download_pdf_proxy(drive_id):
+    """
+    Прокси для скачивания PDF из Google Drive.
+    Файл скачивается через сервер, что обходит перехват Android приложением.
+    """
+    try:
+        service = get_google_drive_service()
+        
+        if not service:
+            return make_response_json({'success': False, 'error': 'Google Drive не доступен'}, 500)
+        
+        # Получаем метаданные файла
+        file_metadata = service.files().get(fileId=drive_id, fields='name, mimeType, size').execute()
+        filename = file_metadata.get('name', 'download.pdf')
+        
+        # Скачиваем файл из Google Drive
+        from googleapiclient.http import MediaIoBaseDownload
+        
+        request = service.files().get_media(fileId=drive_id)
+        file_buffer = io.BytesIO()
+        downloader = MediaIoBaseDownload(file_buffer, request)
+        
+        done = False
+        while not done:
+            status, done = downloader.next_chunk()
+        
+        file_buffer.seek(0)
+        pdf_data = file_buffer.read()
+        
+        logger.info(f"Проксирование PDF: {filename}, размер: {len(pdf_data)} байт")
+        
+        # Возвращаем файл напрямую
+        return Response(
+            pdf_data,
+            mimetype='application/pdf',
+            headers={
+                'Content-Disposition': f'attachment; filename="{filename}"',
+                'Content-Length': str(len(pdf_data)),
+                'Content-Type': 'application/pdf'
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"Ошибка скачивания PDF: {e}")
+        import traceback
+        traceback.print_exc()
+        return make_response_json({'success': False, 'error': str(e)}, 500)
+
+
 
 
 # ========================================
@@ -1295,10 +1633,12 @@ if __name__ == '__main__':
 
     # Запускаем сервер
     logger.info("=" * 50)
-    logger.info("Combined Server запущен на порту 5000")
+    logger.info(f"Combined Server запущен на {API_HOST}:{API_PORT}")
     logger.info("Face Recognition + PDF Generation")
     logger.info(f"Загружено {len(face_encodings_db)} лиц")
     logger.info(f"CUDA: {'включен' if USE_CUDA else 'выключен'}")
+    logger.info(f"CORS origins: {', '.join(CORS_ORIGINS)}")
+    logger.info(f"MAX_CONTENT_LENGTH: {MAX_CONTENT_LENGTH_MB} MB")
     logger.info("=" * 50)
 
     # Используем waitress для production (решает проблему с ngrok)
@@ -1306,8 +1646,9 @@ if __name__ == '__main__':
     try:
         from waitress import serve
         logger.info("Запуск через Waitress (production mode)")
-        serve(app, host='0.0.0.0', port=5000, threads=4)
+        serve(app, host=API_HOST, port=API_PORT, threads=8)
     except ImportError:
         logger.warning("Waitress не установлен, используем Flask dev-server")
         logger.warning("Для лучшей работы с ngrok: pip install waitress")
-        app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)
+        app.run(host=API_HOST, port=API_PORT, debug=False)
+

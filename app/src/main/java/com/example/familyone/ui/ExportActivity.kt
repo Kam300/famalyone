@@ -181,7 +181,7 @@ class ExportActivity : AppCompatActivity() {
         
         // Получаем URL сервера из настроек
         val prefs = getSharedPreferences("app_settings", MODE_PRIVATE)
-        val serverUrl = prefs.getString("pdf_server_url", null)
+        val serverUrl = com.example.familyone.utils.ApiServerConfig.readUnifiedServerUrl(prefs)
         
         lifecycleScope.launch {
             try {

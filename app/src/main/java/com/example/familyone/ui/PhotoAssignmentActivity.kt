@@ -78,7 +78,7 @@ class PhotoAssignmentActivity : AppCompatActivity() {
     
     private fun initServerUrl() {
         val prefs = getSharedPreferences("app_settings", MODE_PRIVATE)
-        val serverUrl = prefs.getString("face_server_url", "https://totalcode.indevs.in") ?: "https://totalcode.indevs.in"
+        val serverUrl = com.example.familyone.utils.ApiServerConfig.readUnifiedServerUrl(prefs)
         FaceRecognitionApi.setServerUrl(serverUrl)
     }
 

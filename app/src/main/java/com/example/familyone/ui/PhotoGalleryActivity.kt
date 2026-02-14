@@ -70,7 +70,7 @@ class PhotoGalleryActivity : AppCompatActivity() {
         
         // Инициализируем URL сервера
         val prefs = getSharedPreferences("app_settings", MODE_PRIVATE)
-        val serverUrl = prefs.getString("face_server_url", "https://totalcode.indevs.in") ?: "https://totalcode.indevs.in"
+        val serverUrl = com.example.familyone.utils.ApiServerConfig.readUnifiedServerUrl(prefs)
         FaceRecognitionApi.setServerUrl(serverUrl)
         
         setupClickListeners()
@@ -707,11 +707,11 @@ class PhotoGalleryActivity : AppCompatActivity() {
     
     private fun showServerSettingsDialog() {
         val prefs = getSharedPreferences("app_settings", MODE_PRIVATE)
-        val currentUrl = prefs.getString("face_server_url", "http://192.168.1.178:5000") ?: "http://192.168.1.178:5000"
+        val currentUrl = com.example.familyone.utils.ApiServerConfig.readUnifiedServerUrl(prefs)
         
         val input = android.widget.EditText(this)
         input.setText(currentUrl)
-        input.hint = "http://192.168.1.178:5000"
+        input.hint = "https://totalcode.indevs.in/api"
         
         MaterialAlertDialogBuilder(this)
             .setTitle("Настройки сервера")
@@ -720,7 +720,7 @@ class PhotoGalleryActivity : AppCompatActivity() {
             .setPositiveButton("Сохранить") { _, _ ->
                 val newUrl = input.text.toString().trim()
                 if (newUrl.isNotEmpty()) {
-                    prefs.edit().putString("face_server_url", newUrl).apply()
+                    com.example.familyone.utils.ApiServerConfig.writeUnifiedServerUrl(prefs, newUrl)
                     FaceRecognitionApi.setServerUrl(newUrl)
                     toast("URL сохранен")
                     checkServerConnection()
@@ -728,8 +728,8 @@ class PhotoGalleryActivity : AppCompatActivity() {
             }
             .setNegativeButton("Отмена", null)
             .setNeutralButton("По умолчанию") { _, _ ->
-                val defaultUrl = "http://192.168.1.178:5000"
-                prefs.edit().putString("face_server_url", defaultUrl).apply()
+                val defaultUrl = "https://totalcode.indevs.in/api"
+                com.example.familyone.utils.ApiServerConfig.writeUnifiedServerUrl(prefs, defaultUrl)
                 FaceRecognitionApi.setServerUrl(defaultUrl)
                 toast("Установлен URL по умолчанию")
                 checkServerConnection()
