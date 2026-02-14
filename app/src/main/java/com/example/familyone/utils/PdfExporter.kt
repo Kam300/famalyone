@@ -42,7 +42,7 @@ sealed class ExportResult {
 object PdfExporter {
     
     // URL единого сервера (теперь Face Recognition + PDF на одном порту 5000)
-    private const val SERVER_URL = "https://api.totalcode.online"
+    private const val SERVER_URL = "https://totalcode.indevs.in"
     
     // OkHttp клиент с большими таймаутами для PDF
     // Используем только HTTP/1.1 — HTTP/2 не работает через Cloudflare Tunnel

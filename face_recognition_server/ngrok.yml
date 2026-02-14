@@ -1,5 +1,0 @@
-version: "2"
-tunnels:
-  familyone:
-    addr: 5000
-    proto: http

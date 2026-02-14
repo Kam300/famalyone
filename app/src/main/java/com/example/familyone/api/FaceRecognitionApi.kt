@@ -40,7 +40,7 @@ data class RegisteredFace(
 object FaceRecognitionApi {
 
     // Публичный API сервер
-    private var serverUrl = "https://api.totalcode.online"
+    private var serverUrl = "https://totalcode.indevs.in"
 
     // Mutex для последовательных запросов
     private val requestMutex = Mutex()

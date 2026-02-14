@@ -1577,13 +1577,13 @@ if __name__ == '__main__':
     logger.info(f"CUDA: {'включен' if USE_CUDA else 'выключен'}")
     logger.info("=" * 50)
 
-    # Используем waitress для production (решает проблему с ngrok)
-    # Flask dev-server может блокировать ответы через ngrok
+    # Используем waitress для production (решает проблему с Cloudflare Tunnel)
+    # Flask dev-server может блокировать ответы через tunnel
     try:
         from waitress import serve
         logger.info("Запуск через Waitress (production mode)")
-        app.run(host='0.0.0.0', port=5000, debug=False)
+        serve(app, host='0.0.0.0', port=5000)
     except ImportError:
         logger.warning("Waitress не установлен, используем Flask dev-server")
-        logger.warning("Для лучшей работы с ngrok: pip install waitress")
+        logger.warning("Для лучшей работы: pip install waitress")
         app.run(host='0.0.0.0', port=5000, debug=False)
