@@ -21,6 +21,7 @@ import com.example.familyone.utils.DataImportExport
 import com.example.familyone.utils.ExportResult
 import com.example.familyone.utils.PdfExporter
 import com.example.familyone.utils.PdfPageFormat
+import com.example.familyone.utils.PdfSettings
 import com.example.familyone.utils.toast
 import com.example.familyone.viewmodel.FamilyViewModel
 import com.google.gson.Gson
@@ -95,14 +96,12 @@ class ExportActivity : AppCompatActivity() {
     
     private fun checkPermissionAndExport(exportAction: (List<FamilyMember>) -> Unit) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            // Android 11 and above - scoped storage, no permission needed
             viewModel.getAllMembersSync { members ->
                 runOnUiThread {
                     exportAction(members)
                 }
             }
         } else {
-            // Android 10 and below - need permission
             if (ContextCompat.checkSelfPermission(
                     this,
                     Manifest.permission.WRITE_EXTERNAL_STORAGE
@@ -158,35 +157,83 @@ class ExportActivity : AppCompatActivity() {
     }
     
     private fun showPdfFormatDialog(members: List<FamilyMember>) {
-        val formats = PdfPageFormat.values()
-        val formatNames = formats.map { it.displayName }.toTypedArray()
-        
+        val dialogView = layoutInflater.inflate(R.layout.dialog_pdf_settings, null)
+
+        val rgFormat = dialogView.findViewById<android.widget.RadioGroup>(R.id.rgPdfFormat)
+        val cbShowPhotos = dialogView.findViewById<android.widget.CheckBox>(R.id.cbShowPhotos)
+        val cbShowDates = dialogView.findViewById<android.widget.CheckBox>(R.id.cbShowDates)
+        val cbShowPatronymic = dialogView.findViewById<android.widget.CheckBox>(R.id.cbShowPatronymic)
+        val etTitle = dialogView.findViewById<android.widget.EditText>(R.id.etPdfTitle)
+
         com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
-            .setTitle("Выберите формат PDF")
-            .setItems(formatNames) { _, which ->
-                exportToPdf(members, formats[which])
+            .setTitle("Настройки PDF")
+            .setView(dialogView)
+            .setPositiveButton("Создать PDF") { _, _ ->
+                val format = when (rgFormat.checkedRadioButtonId) {
+                    R.id.rbA4 -> PdfPageFormat.A4
+                    R.id.rbA4Landscape -> PdfPageFormat.A4_LANDSCAPE
+                    R.id.rbA3 -> PdfPageFormat.A3
+                    R.id.rbA3Landscape -> PdfPageFormat.A3_LANDSCAPE
+                    else -> PdfPageFormat.A4_LANDSCAPE
+                }
+                val pdfSettings = PdfSettings(
+                    format = format,
+                    showPhotos = cbShowPhotos.isChecked,
+                    showDates = cbShowDates.isChecked,
+                    showPatronymic = cbShowPatronymic.isChecked,
+                    title = etTitle.text.toString().ifBlank { "Семейное Древо" }
+                )
+                exportToPdf(members, pdfSettings)
             }
             .setNegativeButton("Отмена", null)
             .show()
     }
-    
-    private fun exportToPdf(members: List<FamilyMember>, format: PdfPageFormat) {
+
+    private fun exportToPdf(members: List<FamilyMember>, pdfSettings: PdfSettings) {
         if (members.isEmpty()) {
             toast("Нет членов семьи для экспорта")
             return
         }
+
+        // Создаём диалог загрузки
+        val loadingLayout = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            gravity = android.view.Gravity.CENTER
+            setPadding(60, 48, 60, 48)
+            
+            addView(android.widget.ProgressBar(this@ExportActivity).apply {
+                isIndeterminate = true
+                layoutParams = android.widget.LinearLayout.LayoutParams(
+                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
+                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { gravity = android.view.Gravity.CENTER }
+            })
+            
+            addView(android.widget.TextView(this@ExportActivity).apply {
+                text = "Генерация PDF...\nПожалуйста, подождите"
+                textSize = 16f
+                gravity = android.view.Gravity.CENTER
+                setPadding(0, 24, 0, 0)
+            })
+        }
+
+        val loadingDialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setTitle("Создание PDF")
+            .setView(loadingLayout)
+            .setCancelable(false)
+            .create()
         
-        // Показать прогресс
-        toast("Создание PDF...")
-        
-        // Получаем URL сервера из настроек
+        loadingDialog.show()
+
         val prefs = getSharedPreferences("app_settings", MODE_PRIVATE)
         val serverUrl = com.example.familyone.utils.ApiServerConfig.readUnifiedServerUrl(prefs)
-        
+
         lifecycleScope.launch {
             try {
-                val result = PdfExporter.exportFamilyTree(this@ExportActivity, members, format, serverUrl)
+                val result = PdfExporter.exportFamilyTree(this@ExportActivity, members, pdfSettings, serverUrl)
                 
+                loadingDialog.dismiss()
+
                 when (result) {
                     is ExportResult.LocalFile -> {
                         if (result.file.exists()) {
@@ -205,6 +252,7 @@ class ExportActivity : AppCompatActivity() {
                     }
                 }
             } catch (e: Exception) {
+                loadingDialog.dismiss()
                 e.printStackTrace()
                 toast(getString(R.string.export_error) + ": ${e.message}")
             }
@@ -301,11 +349,7 @@ class ExportActivity : AppCompatActivity() {
     }
     
     private fun saveToFile(fileName: String, content: String): File {
-        val exportDir = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "FamilyTree")
-        } else {
-            File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "FamilyTree")
-        }
+        val exportDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "FamilyTree")
         
         if (!exportDir.exists()) {
             exportDir.mkdirs()
@@ -345,7 +389,6 @@ class ExportActivity : AppCompatActivity() {
                     val duplicates = mutableListOf<String>()
                     val idMapping = mutableMapOf<Long, Long>()
                     
-                    // Добавляем членов БЕЗ связей
                     importMembers.forEach { member ->
                         val isDuplicate = existingMembers.any { existing ->
                             existing.firstName == member.firstName &&
@@ -373,7 +416,6 @@ class ExportActivity : AppCompatActivity() {
                         }
                     }
                     
-                    // Обновляем связи
                     var linksUpdated = 0
                     importMembers.forEach { member ->
                         val isDuplicate = existingMembers.any { existing ->
@@ -421,4 +463,3 @@ class ExportActivity : AppCompatActivity() {
         }
     }
 }
-

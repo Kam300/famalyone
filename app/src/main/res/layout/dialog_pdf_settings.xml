@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="20dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Заголовок документа -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Заголовок документа"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etPdfTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Семейное Древо"
+                android:inputType="text"
+                android:maxLines="1" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="12dp"
+            android:background="#E0E0E0" />
+
+        <!-- Формат страницы -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Формат страницы"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="#333333"
+            android:layout_marginBottom="8dp" />
+
+        <RadioGroup
+            android:id="@+id/rgPdfFormat"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <RadioButton
+                android:id="@+id/rbA4Landscape"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="A4 Альбомная (рекомендуется)"
+                android:checked="true"
+                android:padding="4dp" />
+
+            <RadioButton
+                android:id="@+id/rbA4"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="A4 Книжная"
+                android:padding="4dp" />
+
+            <RadioButton
+                android:id="@+id/rbA3Landscape"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="A3 Альбомная (большое древо)"
+                android:padding="4dp" />
+
+            <RadioButton
+                android:id="@+id/rbA3"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="A3 Книжная"
+                android:padding="4dp" />
+        </RadioGroup>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="12dp"
+            android:background="#E0E0E0" />
+
+        <!-- Настройки содержимого -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Содержимое"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="#333333"
+            android:layout_marginBottom="8dp" />
+
+        <CheckBox
+            android:id="@+id/cbShowPhotos"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Показывать фото"
+            android:checked="true"
+            android:padding="4dp" />
+
+        <CheckBox
+            android:id="@+id/cbShowDates"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Показывать даты рождения"
+            android:checked="true"
+            android:padding="4dp" />
+
+        <CheckBox
+            android:id="@+id/cbShowPatronymic"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Показывать отчество"
+            android:checked="true"
+            android:padding="4dp" />
+
+    </LinearLayout>
+</ScrollView>

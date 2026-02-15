@@ -65,7 +65,6 @@ dependencies {
     // Room
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
-    implementation(libs.androidx.biometric.ktx)
     ksp(libs.androidx.room.compiler)
     
     // Lifecycle

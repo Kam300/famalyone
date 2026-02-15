@@ -33,6 +33,15 @@ enum class PdfPageFormat(val formatName: String, val displayName: String) {
     A3_LANDSCAPE("A3_LANDSCAPE", "A3 Альбомная")
 }
 
+data class PdfSettings(
+    val format: PdfPageFormat = PdfPageFormat.A4_LANDSCAPE,
+    val showPhotos: Boolean = true,
+    val showDates: Boolean = true,
+    val showPatronymic: Boolean = true,
+    val title: String = "Семейное Древо",
+    val photoQuality: String = "medium" // low, medium, high
+)
+
 sealed class ExportResult {
     data class LocalFile(val file: File) : ExportResult()
     data class DriveUrl(val downloadUrl: String, val filename: String) : ExportResult()
@@ -56,7 +65,7 @@ object PdfExporter {
     suspend fun exportFamilyTree(
         context: Context,
         members: List<FamilyMember>,
-        format: PdfPageFormat = PdfPageFormat.A4_LANDSCAPE,
+        pdfSettings: PdfSettings = PdfSettings(),
         serverUrl: String? = null
     ): ExportResult? = withContext(Dispatchers.IO) {
         try {
@@ -89,8 +98,13 @@ object PdfExporter {
 
             val requestBodyJson = JSONObject().apply {
                 put("members", membersJson)
-                put("format", format.formatName)
+                put("format", pdfSettings.format.formatName)
                 put("use_drive", true)
+                put("show_photos", pdfSettings.showPhotos)
+                put("show_dates", pdfSettings.showDates)
+                put("show_patronymic", pdfSettings.showPatronymic)
+                put("title", pdfSettings.title)
+                put("photo_quality", pdfSettings.photoQuality)
             }
 
             val bodyString = requestBodyJson.toString()
@@ -186,7 +200,7 @@ object PdfExporter {
             throw Exception("No suitable URL candidate for /generate_pdf")
         } catch (e: Exception) {
             Log.e(TAG, "PDF export failed, switching to local fallback: ${e.message}", e)
-            return@withContext exportLocalPdf(context, members, format)
+            return@withContext exportLocalPdf(context, members, pdfSettings.format)
         }
     }
 
@@ -209,7 +223,7 @@ object PdfExporter {
     private fun exportLocalPdf(
         context: Context,
         members: List<FamilyMember>,
-        format: PdfPageFormat
+        format: PdfPageFormat = PdfPageFormat.A4_LANDSCAPE
     ): ExportResult? {
         return try {
             val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
@@ -223,40 +237,145 @@ object PdfExporter {
 
             val file = File(exportDir, "СемейноеДрево_$timestamp.pdf")
 
-            val pageWidth = if (format == PdfPageFormat.A4_LANDSCAPE || format == PdfPageFormat.A3_LANDSCAPE) {
-                842
-            } else {
-                595
-            }
-            val pageHeight = if (format == PdfPageFormat.A4_LANDSCAPE || format == PdfPageFormat.A3_LANDSCAPE) {
-                595
-            } else {
-                842
-            }
+            val pageWidth = if (format == PdfPageFormat.A4_LANDSCAPE || format == PdfPageFormat.A3_LANDSCAPE) 842 else 595
+            val pageHeight = if (format == PdfPageFormat.A4_LANDSCAPE || format == PdfPageFormat.A3_LANDSCAPE) 595 else 842
 
             val pdfDocument = android.graphics.pdf.PdfDocument()
-            val pageInfo = android.graphics.pdf.PdfDocument.PageInfo.Builder(pageWidth, pageHeight, 1).create()
-            val page = pdfDocument.startPage(pageInfo)
-            val canvas = page.canvas
-
             val paint = android.graphics.Paint().apply {
-                color = android.graphics.Color.BLACK
-                textSize = 14f
                 isAntiAlias = true
             }
 
-            var y = 50f
-            canvas.drawText("Family Tree - ${members.size} members", 50f, y, paint)
-            y += 30f
-
-            for (member in members.take(20)) {
-                val text = "${member.lastName} ${member.firstName} - ${member.birthDate}"
-                canvas.drawText(text, 50f, y, paint)
-                y += 25f
-                if (y > pageHeight - 50) break
+            val headerPaint = android.graphics.Paint(paint).apply {
+                textSize = 22f
+                isFakeBoldText = true
+                color = android.graphics.Color.parseColor("#3D2B1F")
+            }
+            val namePaint = android.graphics.Paint(paint).apply {
+                textSize = 13f
+                isFakeBoldText = true
+                color = android.graphics.Color.parseColor("#3D2B1F")
+            }
+            val detailPaint = android.graphics.Paint(paint).apply {
+                textSize = 11f
+                color = android.graphics.Color.parseColor("#666050")
+            }
+            val rolePaint = android.graphics.Paint(paint).apply {
+                textSize = 12f
+                color = android.graphics.Color.parseColor("#338050")
             }
 
-            pdfDocument.finishPage(page)
+            // Группировка по ролям
+            val roleGroups = members.groupBy { it.role.name }
+            val orderedGroups = listOf(
+                "GRANDFATHER" to "Бабушки и Дедушки", "GRANDMOTHER" to "Бабушки и Дедушки",
+                "FATHER" to "Родители", "MOTHER" to "Родители",
+                "SON" to "Дети", "DAUGHTER" to "Дети",
+                "BROTHER" to "Дети", "SISTER" to "Дети"
+            )
+
+            // Собираем по поколениям
+            val generations = linkedMapOf<String, MutableList<FamilyMember>>()
+            for ((role, genName) in orderedGroups) {
+                roleGroups[role]?.let { list ->
+                    generations.getOrPut(genName) { mutableListOf() }.addAll(list)
+                }
+            }
+            // Оставшиеся
+            val usedRoles = orderedGroups.map { it.first }.toSet()
+            val otherMembers = members.filter { it.role.name !in usedRoles }
+            if (otherMembers.isNotEmpty()) {
+                generations.getOrPut("Другие") { mutableListOf() }.addAll(otherMembers)
+            }
+
+            val cardW = 140f
+            val cardH = 80f
+            val gapX = 16f
+            val gapY = 20f
+            var pageNum = 1
+            var currentPage: android.graphics.pdf.PdfDocument.Page? = null
+            var canvas: android.graphics.Canvas? = null
+            var y = 0f
+
+            fun startNewPage() {
+                currentPage?.let { pdfDocument.finishPage(it) }
+                val pageInfo = android.graphics.pdf.PdfDocument.PageInfo.Builder(pageWidth, pageHeight, pageNum).create()
+                currentPage = pdfDocument.startPage(pageInfo)
+                canvas = currentPage!!.canvas
+                // Фон
+                canvas!!.drawColor(android.graphics.Color.parseColor("#F8F4E8"))
+                y = 50f
+                // Заголовок
+                val titleText = if (pageNum == 1) "Семейное Древо" else "Семейное Древо (стр. $pageNum)"
+                val tw = headerPaint.measureText(titleText)
+                canvas!!.drawText(titleText, (pageWidth - tw) / 2, y, headerPaint)
+                y += 40f
+                pageNum++
+            }
+
+            startNewPage()
+
+            for ((genName, genMembers) in generations) {
+                // Метка поколения
+                if (y + cardH + 30 > pageHeight - 40) {
+                    startNewPage()
+                }
+                val labelPaint = android.graphics.Paint(paint).apply {
+                    textSize = 14f
+                    isFakeBoldText = true
+                    color = android.graphics.Color.parseColor("#6B4226")
+                }
+                val lw = labelPaint.measureText(genName)
+                canvas!!.drawText(genName, (pageWidth - lw) / 2, y, labelPaint)
+                y += 22f
+
+                // Карточки в ряды
+                val maxPerRow = ((pageWidth - 60) / (cardW + gapX)).toInt().coerceAtLeast(1)
+                val rows = genMembers.chunked(maxPerRow)
+
+                for (row in rows) {
+                    if (y + cardH + gapY > pageHeight - 40) {
+                        startNewPage()
+                    }
+                    val totalW = row.size * cardW + (row.size - 1) * gapX
+                    var x = (pageWidth - totalW) / 2
+
+                    for (member in row) {
+                        // Тень
+                        val shadowPaint = android.graphics.Paint().apply { color = android.graphics.Color.parseColor("#B8B0A0") }
+                        canvas!!.drawRoundRect(x + 2, y + 2, x + cardW + 2, y + cardH + 2, 8f, 8f, shadowPaint)
+                        // Фон карточки
+                        val cardBg = android.graphics.Paint().apply { color = android.graphics.Color.parseColor("#FAF6EE") }
+                        canvas!!.drawRoundRect(x, y, x + cardW, y + cardH, 8f, 8f, cardBg)
+                        // Рамка
+                        val borderPaint = android.graphics.Paint().apply {
+                            style = android.graphics.Paint.Style.STROKE
+                            strokeWidth = 1.5f
+                            color = android.graphics.Color.parseColor("#998060")
+                        }
+                        canvas!!.drawRoundRect(x, y, x + cardW, y + cardH, 8f, 8f, borderPaint)
+
+                        // Имя
+                        val name = "${member.lastName} ${member.firstName}"
+                        val nw = namePaint.measureText(name)
+                        canvas!!.drawText(name, x + (cardW - nw) / 2, y + 22f, namePaint)
+
+                        // Роль
+                        val roleText = getRoleName(member.role.name)
+                        val rw = rolePaint.measureText(roleText)
+                        canvas!!.drawText(roleText, x + (cardW - rw) / 2, y + 40f, rolePaint)
+
+                        // Дата
+                        val dw = detailPaint.measureText(member.birthDate)
+                        canvas!!.drawText(member.birthDate, x + (cardW - dw) / 2, y + 56f, detailPaint)
+
+                        x += cardW + gapX
+                    }
+                    y += cardH + gapY
+                }
+                y += 10f
+            }
+
+            currentPage?.let { pdfDocument.finishPage(it) }
             FileOutputStream(file).use { output ->
                 pdfDocument.writeTo(output)
             }
@@ -266,6 +385,26 @@ object PdfExporter {
         } catch (e: Exception) {
             e.printStackTrace()
             null
+        }
+    }
+
+    private fun getRoleName(role: String): String {
+        return when (role) {
+            "GRANDFATHER" -> "Дедушка"
+            "GRANDMOTHER" -> "Бабушка"
+            "FATHER" -> "Отец"
+            "MOTHER" -> "Мать"
+            "SON" -> "Сын"
+            "DAUGHTER" -> "Дочь"
+            "BROTHER" -> "Брат"
+            "SISTER" -> "Сестра"
+            "UNCLE" -> "Дядя"
+            "AUNT" -> "Тётя"
+            "NEPHEW" -> "Племянник"
+            "NIECE" -> "Племянница"
+            "GRANDSON" -> "Внук"
+            "GRANDDAUGHTER" -> "Внучка"
+            else -> "Родственник"
         }
     }
 
@@ -290,9 +429,9 @@ object PdfExporter {
             }
 
             if (bitmap != null) {
-                val scaledBitmap = Bitmap.createScaledBitmap(bitmap, 100, 100, true)
+                val scaledBitmap = Bitmap.createScaledBitmap(bitmap, 200, 200, true)
                 val stream = ByteArrayOutputStream()
-                scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 70, stream)
+                scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 85, stream)
                 val base64 = Base64.encodeToString(stream.toByteArray(), Base64.NO_WRAP)
 
                 bitmap.recycle()
@@ -308,5 +447,3 @@ object PdfExporter {
         }
     }
 }
-
-
