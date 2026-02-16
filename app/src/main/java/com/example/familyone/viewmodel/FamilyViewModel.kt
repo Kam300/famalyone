@@ -1,9 +1,11 @@
 package com.example.familyone.viewmodel
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.viewModelScope
+import com.example.familyone.api.FaceRecognitionApi
 import com.example.familyone.data.FamilyDatabase
 import com.example.familyone.data.FamilyMember
 import com.example.familyone.data.FamilyRepository
@@ -37,6 +39,14 @@ class FamilyViewModel(application: Application) : AndroidViewModel(application) 
     
     fun deleteMember(member: FamilyMember, onComplete: () -> Unit = {}) {
         viewModelScope.launch {
+            // Удаляем лицо с сервера распознавания
+            try {
+                FaceRecognitionApi.deleteFace(member.id)
+                Log.d("FamilyViewModel", "Лицо удалено с сервера для ID: ${member.id}")
+            } catch (e: Exception) {
+                Log.w("FamilyViewModel", "Не удалось удалить лицо с сервера: ${e.message}")
+            }
+            // Удаляем из локальной базы
             repository.deleteMember(member)
             onComplete()
         }
@@ -44,6 +54,14 @@ class FamilyViewModel(application: Application) : AndroidViewModel(application) 
     
     fun deleteAllMembers(onComplete: () -> Unit = {}) {
         viewModelScope.launch {
+            // Очищаем все лица на сервере распознавания
+            try {
+                FaceRecognitionApi.clearAll()
+                Log.d("FamilyViewModel", "Все лица удалены с сервера")
+            } catch (e: Exception) {
+                Log.w("FamilyViewModel", "Не удалось очистить сервер: ${e.message}")
+            }
+            // Удаляем из локальной базы
             repository.deleteAllMembers()
             onComplete()
         }

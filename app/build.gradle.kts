@@ -83,6 +83,7 @@ dependencies {
     
     // Splash Screen
     implementation("androidx.core:core-splashscreen:1.0.1")
+    implementation("androidx.exifinterface:exifinterface:1.3.7")
     
     // WorkManager
     implementation("androidx.work:work-runtime-ktx:2.9.0")

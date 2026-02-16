@@ -391,8 +391,8 @@ object FaceRecognitionApi {
     }
 
     private fun bitmapToBase64(bitmap: Bitmap): String {
-        val maxSize = 256
-        val quality = 30
+        val maxSize = 640   // Увеличено для точного распознавания лиц
+        val quality = 85    // Высокое качество для сохранения деталей лица
 
         val scaledBitmap = if (bitmap.width > maxSize || bitmap.height > maxSize) {
             val ratio = maxSize.toFloat() / maxOf(bitmap.width, bitmap.height)

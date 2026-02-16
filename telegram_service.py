@@ -165,16 +165,16 @@ FACE_MODEL = 'cnn' if USE_CUDA else 'hog'
 # Количество раз для повышения разрешения при поиске лиц (0 = без увеличения)
 # Увеличение замедляет работу, но находит мелкие лица
 # Для скорости с GPU можно оставить 0 или 1
-NUMBER_OF_TIMES_TO_UPSAMPLE = 0
+NUMBER_OF_TIMES_TO_UPSAMPLE = 1
 
 # Количество jitters при кодировании лица (больше = точнее, но медленнее)
 # 1 = быстро, 100 = очень точно но медленно
 # Для GPU можно увеличить до 10-20 без потери скорости
-NUM_JITTERS = 1  # 1 = быстро, уменьшено для скорости
+NUM_JITTERS = 10  # 10 = хороший баланс точности и скорости
 
 # Дополнительные оптимизации для GPU
 BATCH_SIZE = 128  # Размер батча для обработки (больше = быстрее на GPU)
-MAX_IMAGE_SIZE = 400  # Уменьшено для быстрой обработки
+MAX_IMAGE_SIZE = 800  # Увеличено для лучшей точности распознавания
 
 # Кэш для ускорения повторных запросов
 face_detection_cache = {}
@@ -492,11 +492,18 @@ def decode_base64_image(base64_string):
         image_data = base64.b64decode(base64_string)
         image = Image.open(io.BytesIO(image_data))
 
+        # Исправляем ориентацию по EXIF (Android камеры часто сохраняют повёрнутые фото)
+        try:
+            from PIL import ImageOps
+            image = ImageOps.exif_transpose(image)
+        except Exception:
+            pass
+
         # Конвертируем в RGB если нужно
         if image.mode != 'RGB':
             image = image.convert('RGB')
 
-        # Оптимизация размера для GPU - уменьшаем большие изображения
+        # Оптимизация размера - уменьшаем большие изображения
         width, height = image.size
         if max(width, height) > MAX_IMAGE_SIZE:
             ratio = MAX_IMAGE_SIZE / max(width, height)
@@ -509,32 +516,7 @@ def decode_base64_image(base64_string):
     except Exception as e:
         logger.error(f"Ошибка декодирования изображения: {e}")
         return None
-    """Декодирование base64 изображения с оптимизацией для GPU"""
-    try:
-        # Убираем префикс data:image если есть
-        if ',' in base64_string:
-            base64_string = base64_string.split(',')[1]
 
-        image_data = base64.b64decode(base64_string)
-        image = Image.open(io.BytesIO(image_data))
-
-        # Конвертируем в RGB если нужно
-        if image.mode != 'RGB':
-            image = image.convert('RGB')
-
-        # Оптимизация размера для GPU - уменьшаем большие изображения
-        width, height = image.size
-        if max(width, height) > MAX_IMAGE_SIZE:
-            ratio = MAX_IMAGE_SIZE / max(width, height)
-            new_width = int(width * ratio)
-            new_height = int(height * ratio)
-            image = image.resize((new_width, new_height), Image.LANCZOS)
-            logger.info(f"Изображение уменьшено с {width}x{height} до {new_width}x{new_height}")
-
-        return np.array(image)
-    except Exception as e:
-        logger.error(f"Ошибка декодирования изображения: {e}")
-        return None
 
 
 # ========================================
