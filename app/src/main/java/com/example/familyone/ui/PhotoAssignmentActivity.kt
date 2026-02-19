@@ -3,10 +3,10 @@ package com.example.familyone.ui
 import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.provider.MediaStore
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -30,28 +30,77 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
+import java.util.Locale
 
-/**
- * Удобный экран для привязки фотографий к членам семьи
- * Позволяет выбрать фото и вручную или автоматически привязать к членам семьи
- */
 class PhotoAssignmentActivity : AppCompatActivity() {
-    
+
+    companion object {
+        private const val MAX_BATCH_PHOTOS = 20
+    }
+
     private lateinit var binding: ActivityPhotoAssignmentBinding
     private lateinit var viewModel: FamilyViewModel
     private lateinit var memberAdapter: MemberSelectionAdapter
-    
-    private var selectedBitmap: Bitmap? = null
-    private var selectedUri: Uri? = null
+    private lateinit var pendingAdapter: PendingPhotoAssignmentAdapter
+
     private var allMembers: List<FamilyMember> = emptyList()
     private var isServerConnected = false
-    
-    private val imagePickerLauncher = registerForActivityResult(
-        ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let { handleSelectedImage(it) }
+
+    private val selectedPhotoUris = mutableListOf<Uri>()
+    private val pendingManualPhotos = mutableListOf<PendingManualPhoto>()
+    private var activePendingIndex: Int? = null
+
+    private var lastBatchSelectedCount = 0
+
+    private var autoSavedCount = 0
+    private var autoDuplicateCount = 0
+    private var autoErrorCount = 0
+
+    private var manualSavedCount = 0
+    private var manualDuplicateCount = 0
+    private var manualErrorCount = 0
+
+    private var noMatchCount = 0
+    private var apiErrorCount = 0
+    private var decodeErrorCount = 0
+    private val autoAssignedByMember = linkedMapOf<String, Int>()
+
+    private enum class PendingReason {
+        NO_MATCH,
+        API_ERROR,
+        DECODE_ERROR
     }
-    
+
+    private enum class SavePhotoResult {
+        SAVED,
+        DUPLICATE,
+        ERROR
+    }
+
+    private data class PendingManualPhoto(
+        val uri: Uri,
+        val reason: PendingReason,
+        val error: String? = null
+    )
+
+    private data class RecognizedMemberBucket(
+        val memberName: String,
+        val photoUris: MutableList<Uri>
+    )
+
+    private data class BatchRecognitionResult(
+        val recognized: LinkedHashMap<String, RecognizedMemberBucket>,
+        val pending: MutableList<PendingManualPhoto>
+    )
+
+    private val imagePickerLauncher = registerForActivityResult(
+        ActivityResultContracts.GetMultipleContents()
+    ) { uris: List<Uri> ->
+        if (uris.isNotEmpty()) {
+            handleSelectedImages(uris)
+        }
+    }
+
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -61,21 +110,23 @@ class PhotoAssignmentActivity : AppCompatActivity() {
             toast("Требуется разрешение для доступа к фото")
         }
     }
-    
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityPhotoAssignmentBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        
+
         viewModel = ViewModelProvider(this)[FamilyViewModel::class.java]
-        
+
         initServerUrl()
         setupRecyclerView()
+        setupPendingRecyclerView()
         setupClickListeners()
         loadMembers()
+        resetSelectionUi()
         checkServerAndSync()
     }
-    
+
     private fun initServerUrl() {
         val prefs = getSharedPreferences("app_settings", MODE_PRIVATE)
         val serverUrl = com.example.familyone.utils.ApiServerConfig.readUnifiedServerUrl(prefs)
@@ -85,283 +136,208 @@ class PhotoAssignmentActivity : AppCompatActivity() {
     private fun setupRecyclerView() {
         memberAdapter = MemberSelectionAdapter(
             onMemberClick = { member ->
-                if (selectedBitmap != null) {
-                    showAssignConfirmDialog(member)
-                } else {
-                    toast("Сначала выберите фото")
-                }
+                handleMemberClick(member)
             }
         )
-        
+
         binding.rvMembers.apply {
             layoutManager = LinearLayoutManager(this@PhotoAssignmentActivity)
             adapter = memberAdapter
         }
+
+        memberAdapter.setSelectionEnabled(false)
     }
-    
+
+    private fun setupPendingRecyclerView() {
+        pendingAdapter = PendingPhotoAssignmentAdapter { index ->
+            activePendingIndex = index
+            refreshPendingUi()
+            scrollToMembersSection()
+        }
+
+        binding.rvPendingManual.apply {
+            layoutManager = LinearLayoutManager(this@PhotoAssignmentActivity)
+            adapter = pendingAdapter
+        }
+    }
+
     private fun setupClickListeners() {
-        binding.btnBack.setOnClickListener {
-            finish()
-        }
-        
-        binding.btnSelectPhoto.setOnClickListener {
-            checkPermissionAndPickImage()
-        }
-        
+        binding.btnBack.setOnClickListener { finish() }
+        binding.btnSelectPhoto.setOnClickListener { checkPermissionAndPickImage() }
         binding.btnAutoRecognize.setOnClickListener {
-            if (selectedBitmap != null && isServerConnected) {
-                autoRecognizeAndAssign()
-            } else if (!isServerConnected) {
-                toast("Сервер недоступен")
-            } else {
-                toast("Сначала выберите фото")
+            when {
+                selectedPhotoUris.isEmpty() -> toast("Сначала выберите фото")
+                !isServerConnected -> toast("Сервер недоступен")
+                else -> autoRecognizeAndAssign()
             }
         }
-        
-        binding.btnSyncAll.setOnClickListener {
-            syncAllMembersToServer()
-        }
+        binding.btnSyncAll.setOnClickListener { syncAllMembersToServer() }
     }
-    
+
     private fun loadMembers() {
         viewModel.allMembers.observe(this) { members ->
             allMembers = members
             memberAdapter.submitList(members)
-            
+
             binding.tvEmptyMembers.visibility = if (members.isEmpty()) View.VISIBLE else View.GONE
             binding.rvMembers.visibility = if (members.isEmpty()) View.GONE else View.VISIBLE
         }
     }
-    
+
     private fun checkServerAndSync() {
-        binding.tvServerStatus.text = "🔄 Проверка сервера..."
+        binding.tvServerStatus.text = "Проверка сервера..."
         binding.tvServerStatus.visibility = View.VISIBLE
-        
+
         CoroutineScope(Dispatchers.Main).launch {
             isServerConnected = FaceRecognitionApi.checkHealth()
-            
             if (isServerConnected) {
-                binding.tvServerStatus.text = "✓ Сервер подключен"
+                binding.tvServerStatus.text = "Сервер подключен"
                 binding.tvServerStatus.setTextColor(getColor(R.color.green_accent))
-                binding.btnAutoRecognize.isEnabled = true
                 binding.btnSyncAll.isEnabled = true
-                
-                // Автоматическая синхронизация при подключении
                 checkAndSyncMembers()
-                
                 binding.tvServerStatus.postDelayed({
                     binding.tvServerStatus.visibility = View.GONE
                 }, 3000)
             } else {
-                binding.tvServerStatus.text = "✗ Сервер недоступен"
+                binding.tvServerStatus.text = "Сервер недоступен"
                 binding.tvServerStatus.setTextColor(getColor(R.color.red_button))
-                binding.btnAutoRecognize.isEnabled = false
                 binding.btnSyncAll.isEnabled = false
             }
+            updateActionButtons()
         }
     }
-    
-    /**
-     * Проверяет и синхронизирует всех членов семьи с сервером
-     * Регистрирует тех, кто еще не зарегистрирован
-     */
     private fun checkAndSyncMembers() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                // Получаем список зарегистрированных лиц на сервере
                 val serverFacesResult = FaceRecognitionApi.listFaces()
                 val serverFaceIds = serverFacesResult.getOrNull()?.map { it.memberId }?.toSet() ?: emptySet()
-                
-                android.util.Log.d("PhotoAssignment", "📋 На сервере зарегистрировано: ${serverFaceIds.size} лиц")
-                android.util.Log.d("PhotoAssignment", "📋 Server IDs: $serverFaceIds")
-                
-                // Конвертируем server IDs в local IDs для сопоставления с адаптером
+
                 val localRegisteredIds = serverFaceIds.mapNotNull { serverId ->
                     try {
                         UniqueIdHelper.fromServerId(serverId.toLong()).toString()
-                    } catch (e: Exception) {
-                        android.util.Log.w("PhotoAssignment", "⚠️ Не удалось конвертировать serverId: $serverId")
+                    } catch (_: Exception) {
                         null
                     }
                 }.toSet()
-                
-                android.util.Log.d("PhotoAssignment", "📋 Local IDs: $localRegisteredIds")
-                
-                // Обновляем UI адаптера с информацией о зарегистрированных членах (local IDs)
+
                 withContext(Dispatchers.Main) {
                     memberAdapter.updateRegisteredMembers(localRegisteredIds)
                 }
-                
-                // Получаем всех членов семьи с фото
+
                 val database = FamilyDatabase.getDatabase(applicationContext)
                 val members = database.familyMemberDao().getAllMembersSync()
-                
                 var registeredCount = 0
-                var skippedCount = 0
-                
+
                 for (member in members) {
-                    if (member.photoUri.isNullOrEmpty()) {
-                        skippedCount++
-                        continue
-                    }
-                    
+                    if (member.photoUri.isNullOrEmpty()) continue
+
                     val serverId = UniqueIdHelper.toServerId(applicationContext, member.id).toString()
-                    
-                    if (serverId in serverFaceIds) {
-                        android.util.Log.d("PhotoAssignment", "✓ ${member.firstName} уже зарегистрирован")
-                        continue
-                    }
-                    
-                    // Регистрируем на сервере
+                    if (serverId in serverFaceIds) continue
+
                     val photoFile = File(member.photoUri!!.replace("file://", ""))
-                    if (photoFile.exists()) {
-                        val bitmap = android.graphics.BitmapFactory.decodeFile(photoFile.absolutePath)
-                        if (bitmap != null) {
-                            val fullName = "${member.firstName} ${member.lastName}"
-                            val result = FaceRecognitionApi.registerFace(
-                                UniqueIdHelper.toServerId(applicationContext, member.id),
-                                fullName,
-                                bitmap
-                            )
-                            
-                            result.onSuccess {
-                                registeredCount++
-                                android.util.Log.d("PhotoAssignment", "✅ Зарегистрирован: $fullName")
-                            }
-                            
-                            result.onFailure { error ->
-                                android.util.Log.e("PhotoAssignment", "❌ Ошибка регистрации $fullName: ${error.message}")
-                            }
-                            
-                            bitmap.recycle()
-                        }
+                    if (!photoFile.exists()) continue
+
+                    val bitmap = BitmapFactory.decodeFile(photoFile.absolutePath) ?: continue
+                    val fullName = "${member.firstName} ${member.lastName}".trim()
+                    val result = FaceRecognitionApi.registerFace(
+                        UniqueIdHelper.toServerId(applicationContext, member.id),
+                        fullName,
+                        bitmap
+                    )
+                    if (result.isSuccess) {
+                        registeredCount++
                     }
+                    bitmap.recycle()
                 }
-                
-                // Обновляем статусы после регистрации
+
                 if (registeredCount > 0) {
                     val updatedFacesResult = FaceRecognitionApi.listFaces()
                     val updatedServerIds = updatedFacesResult.getOrNull()?.map { it.memberId }?.toSet() ?: emptySet()
-                    
-                    // Конвертируем в local IDs
                     val updatedLocalIds = updatedServerIds.mapNotNull { serverId ->
                         try {
                             UniqueIdHelper.fromServerId(serverId.toLong()).toString()
-                        } catch (e: Exception) { null }
+                        } catch (_: Exception) {
+                            null
+                        }
                     }.toSet()
-                    
+
                     withContext(Dispatchers.Main) {
                         memberAdapter.updateRegisteredMembers(updatedLocalIds)
-                        toast("✓ Синхронизировано: $registeredCount членов семьи")
+                        toast("Синхронизировано: $registeredCount")
                     }
                 }
-                
             } catch (e: Exception) {
-                android.util.Log.e("PhotoAssignment", "❌ Ошибка синхронизации", e)
+                android.util.Log.e("PhotoAssignment", "Sync error", e)
             }
         }
     }
 
-    /**
-     * Принудительная синхронизация всех членов семьи
-     */
     private fun syncAllMembersToServer() {
         if (!isServerConnected) {
             toast("Сервер недоступен")
             return
         }
-        
+
         binding.progressBar.visibility = View.VISIBLE
         binding.tvSyncStatus.text = "Синхронизация..."
         binding.tvSyncStatus.visibility = View.VISIBLE
-        
+
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val database = FamilyDatabase.getDatabase(applicationContext)
                 val members = database.familyMemberDao().getAllMembersSync()
-                
                 var registeredCount = 0
                 var errorCount = 0
                 var noPhotoCount = 0
-                
+
                 for ((index, member) in members.withIndex()) {
                     withContext(Dispatchers.Main) {
                         binding.tvSyncStatus.text = "Обработка ${index + 1}/${members.size}..."
                     }
-                    
+
                     if (member.photoUri.isNullOrEmpty()) {
                         noPhotoCount++
                         continue
                     }
-                    
+
                     val photoFile = File(member.photoUri!!.replace("file://", ""))
                     if (!photoFile.exists()) {
                         noPhotoCount++
                         continue
                     }
-                    
-                    val bitmap = android.graphics.BitmapFactory.decodeFile(photoFile.absolutePath)
+
+                    val bitmap = BitmapFactory.decodeFile(photoFile.absolutePath)
                     if (bitmap == null) {
                         errorCount++
                         continue
                     }
-                    
-                    val fullName = "${member.firstName} ${member.lastName}"
+
+                    val fullName = "${member.firstName} ${member.lastName}".trim()
                     val serverId = UniqueIdHelper.toServerId(applicationContext, member.id)
-                    
                     val result = FaceRecognitionApi.registerFace(serverId, fullName, bitmap)
-                    
-                    result.onSuccess {
-                        registeredCount++
-                    }
-                    
-                    result.onFailure {
-                        errorCount++
-                    }
-                    
+                    if (result.isSuccess) registeredCount++ else errorCount++
                     bitmap.recycle()
                 }
-                
+
                 withContext(Dispatchers.Main) {
                     binding.progressBar.visibility = View.GONE
-                    
-                    val message = buildString {
-                        append("✓ Зарегистрировано: $registeredCount\n")
-                        if (noPhotoCount > 0) append("⚠️ Без фото: $noPhotoCount\n")
-                        if (errorCount > 0) append("❌ Ошибок: $errorCount")
+                    binding.tvSyncStatus.text = buildString {
+                        append("Зарегистрировано: $registeredCount")
+                        if (noPhotoCount > 0) append("\nБез фото: $noPhotoCount")
+                        if (errorCount > 0) append("\nОшибок: $errorCount")
                     }
-                    
-                    binding.tvSyncStatus.text = message
                     binding.tvSyncStatus.setTextColor(getColor(R.color.green_accent))
-                    
-                    toast("Синхронизация завершена")
                 }
-                
-                // Обновляем статусы в адаптере после синхронизации
-                val updatedFacesResult = FaceRecognitionApi.listFaces()
-                val updatedServerIds = updatedFacesResult.getOrNull()?.map { it.memberId }?.toSet() ?: emptySet()
-                
-                // Конвертируем в local IDs
-                val updatedLocalIds = updatedServerIds.mapNotNull { serverId ->
-                    try {
-                        UniqueIdHelper.fromServerId(serverId.toLong()).toString()
-                    } catch (e: Exception) { null }
-                }.toSet()
-                
-                withContext(Dispatchers.Main) {
-                    memberAdapter.updateRegisteredMembers(updatedLocalIds)
-                }
-                
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     binding.progressBar.visibility = View.GONE
-                    binding.tvSyncStatus.text = "❌ Ошибка: ${e.message}"
+                    binding.tvSyncStatus.text = "Ошибка: ${e.message}"
                     binding.tvSyncStatus.setTextColor(getColor(R.color.red_button))
                 }
             }
         }
     }
-    
+
     private fun checkPermissionAndPickImage() {
         when {
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> {
@@ -388,217 +364,515 @@ class PhotoAssignmentActivity : AppCompatActivity() {
             }
         }
     }
-    
+
     private fun openImagePicker() {
         imagePickerLauncher.launch("image/*")
     }
-    
-    private fun handleSelectedImage(uri: Uri) {
-        try {
-            selectedUri = uri
-            selectedBitmap = MediaStore.Images.Media.getBitmap(contentResolver, uri)
-            
-            // Показываем превью, скрываем пустое состояние
-            binding.cardPhotoPreview.visibility = View.VISIBLE
-            binding.layoutEmptyState.visibility = View.GONE
-            
-            Glide.with(this)
-                .load(uri)
-                .centerCrop()
-                .into(binding.ivPhotoPreview)
-            
-            // Обновляем пошаговый индикатор
-            binding.tvStep1.setTextColor(getColor(R.color.green_accent))
-            binding.tvStep1.text = "Фото выбрано"
-            binding.tvStep1.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_check_circle, 0, 0, 0)
-            binding.tvStep2.setTextColor(getColor(R.color.purple_button))
-            binding.tvStep2.setTypeface(null, android.graphics.Typeface.BOLD)
-            
-        } catch (e: Exception) {
-            toast("Ошибка загрузки фото")
-            e.printStackTrace()
+
+    private fun handleSelectedImages(uris: List<Uri>) {
+        resetBatchStateForNewSelection()
+
+        val limitedUris = if (uris.size > MAX_BATCH_PHOTOS) {
+            toast("Можно выбрать до $MAX_BATCH_PHOTOS фото. Будут обработаны первые $MAX_BATCH_PHOTOS")
+            uris.take(MAX_BATCH_PHOTOS)
+        } else {
+            uris
+        }
+
+        selectedPhotoUris.addAll(limitedUris)
+        lastBatchSelectedCount = selectedPhotoUris.size
+
+        if (selectedPhotoUris.isEmpty()) {
+            resetSelectionUi()
+            return
+        }
+
+        binding.cardPhotoPreview.visibility = View.VISIBLE
+        binding.layoutEmptyState.visibility = View.GONE
+
+        Glide.with(this)
+            .load(selectedPhotoUris.first())
+            .centerCrop()
+            .into(binding.ivPhotoPreview)
+
+        binding.tvStep1.text = "1. Фото выбраны (${selectedPhotoUris.size})"
+        binding.tvStep1.setTextColor(getColor(R.color.green_accent))
+        binding.tvStep1.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_check_circle, 0, 0, 0)
+
+        binding.tvStep2.text = "2. AI + ручное назначение"
+        binding.tvStep2.setTextColor(getColor(R.color.purple_button))
+        binding.tvStep2.setTypeface(null, android.graphics.Typeface.BOLD)
+
+        binding.tvSyncStatus.visibility = View.VISIBLE
+        binding.tvSyncStatus.setTextColor(getColor(R.color.green_accent))
+        binding.tvSyncStatus.text = "Выбрано фото: ${selectedPhotoUris.size}. Нажмите AI"
+
+        updateActionButtons()
+    }
+
+    private fun autoRecognizeAndAssign() {
+        if (selectedPhotoUris.isEmpty() || !isServerConnected) {
+            return
+        }
+
+        memberAdapter.setSelectionEnabled(false)
+        activePendingIndex = null
+
+        binding.progressBar.visibility = View.VISIBLE
+        binding.tvSyncStatus.visibility = View.VISIBLE
+        binding.tvSyncStatus.setTextColor(getColor(R.color.white))
+        binding.tvSyncStatus.text = "Распознавание..."
+
+        binding.btnAutoRecognize.isEnabled = false
+        binding.btnSelectPhoto.isEnabled = false
+
+        CoroutineScope(Dispatchers.Main).launch {
+            try {
+                resetCounters()
+                val batchResult = processBatchRecognition()
+
+                pendingManualPhotos.clear()
+                pendingManualPhotos.addAll(batchResult.pending)
+                activePendingIndex = null
+
+                if (batchResult.recognized.isNotEmpty()) {
+                    showRecognizedAssignmentsDialog(batchResult.recognized)
+                } else {
+                    handleManualStageOrFinish()
+                }
+            } catch (e: Exception) {
+                binding.tvSyncStatus.setTextColor(getColor(R.color.red_button))
+                binding.tvSyncStatus.text = "Ошибка: ${e.message}"
+            } finally {
+                binding.progressBar.visibility = View.GONE
+                binding.btnSelectPhoto.isEnabled = true
+                updateActionButtons()
+            }
         }
     }
 
-    /**
-     * Автоматическое распознавание и привязка фото
-     */
-    private fun autoRecognizeAndAssign() {
-        val bitmap = selectedBitmap ?: return
-        
-        binding.progressBar.visibility = View.VISIBLE
-        binding.tvSyncStatus.text = "Распознавание..."
-        binding.tvSyncStatus.visibility = View.VISIBLE
-        
-        CoroutineScope(Dispatchers.Main).launch {
-            try {
-                val result = FaceRecognitionApi.recognizeFace(bitmap)
-                
-                result.onSuccess { recognitions ->
-                    binding.progressBar.visibility = View.GONE
-                    
-                    if (recognitions.isEmpty()) {
-                        binding.tvSyncStatus.text = "⚠️ Лица не распознаны"
-                        binding.tvSyncStatus.setTextColor(getColor(R.color.red_button))
-                        toast("На фото не найдено знакомых лиц")
-                    } else {
-                        showRecognitionResultsDialog(recognitions)
-                    }
-                }
-                
-                result.onFailure { error ->
-                    binding.progressBar.visibility = View.GONE
-                    binding.tvSyncStatus.text = "❌ ${error.message}"
-                    binding.tvSyncStatus.setTextColor(getColor(R.color.red_button))
-                }
-                
-            } catch (e: Exception) {
-                binding.progressBar.visibility = View.GONE
-                binding.tvSyncStatus.text = "❌ Ошибка: ${e.message}"
-                binding.tvSyncStatus.setTextColor(getColor(R.color.red_button))
+    private suspend fun processBatchRecognition(): BatchRecognitionResult {
+        val recognized = linkedMapOf<String, RecognizedMemberBucket>()
+        val pending = mutableListOf<PendingManualPhoto>()
+
+        for ((index, uri) in selectedPhotoUris.withIndex()) {
+            binding.tvSyncStatus.text = "AI: обработка ${index + 1} из ${selectedPhotoUris.size}"
+
+            val bitmap = withContext(Dispatchers.IO) { decodeBitmapFromUri(uri) }
+            if (bitmap == null) {
+                pending.add(PendingManualPhoto(uri, PendingReason.DECODE_ERROR, "Не удалось открыть фото"))
+                decodeErrorCount++
+                continue
             }
-        }
-    }
-    
-    private fun showRecognitionResultsDialog(recognitions: List<com.example.familyone.api.RecognitionResult>) {
-        val message = buildString {
-            append("🎯 Найдено: ${recognitions.size} человек\n\n")
-            recognitions.forEachIndexed { index, result ->
-                val confidence = (result.confidence * 100).toInt()
-                val emoji = when {
-                    confidence >= 90 -> "✅"
-                    confidence >= 70 -> "⚠️"
-                    else -> "❓"
-                }
-                append("$emoji ${index + 1}. ${result.memberName}\n")
-                append("   Уверенность: $confidence%\n\n")
-            }
-        }
-        
-        binding.tvSyncStatus.text = message
-        binding.tvSyncStatus.setTextColor(getColor(R.color.green_accent))
-        
-        val names = recognitions.map { it.memberName }.toTypedArray()
-        val checkedItems = BooleanArray(recognitions.size) { true }
-        
-        MaterialAlertDialogBuilder(this)
-            .setTitle("🤖 Результаты распознавания")
-            .setMultiChoiceItems(names, checkedItems) { _, which, isChecked ->
-                checkedItems[which] = isChecked
-            }
-            .setPositiveButton("Прикрепить") { _, _ ->
-                assignPhotoToRecognizedMembers(recognitions, checkedItems)
-            }
-            .setNegativeButton("Отмена", null)
-            .show()
-    }
-    
-    private fun assignPhotoToRecognizedMembers(
-        recognitions: List<com.example.familyone.api.RecognitionResult>,
-        checkedItems: BooleanArray
-    ) {
-        val bitmap = selectedBitmap ?: return
-        
-        CoroutineScope(Dispatchers.IO).launch {
-            var savedCount = 0
-            
-            recognitions.forEachIndexed { index, result ->
-                if (checkedItems[index]) {
-                    val localMemberId = UniqueIdHelper.fromServerId(result.memberId.toLong())
-                    val saved = savePhotoToMember(localMemberId, result.memberName, bitmap)
-                    if (saved) savedCount++
-                }
-            }
-            
-            withContext(Dispatchers.Main) {
-                if (savedCount > 0) {
-                    toast("✓ Фото прикреплено к $savedCount членам семьи")
-                    clearSelection()
+
+            val result = FaceRecognitionApi.recognizeFace(bitmap)
+            bitmap.recycle()
+
+            if (result.isSuccess) {
+                val recognitions = result.getOrDefault(emptyList())
+                if (recognitions.isEmpty()) {
+                    pending.add(PendingManualPhoto(uri, PendingReason.NO_MATCH))
+                    noMatchCount++
                 } else {
-                    toast("⚠️ Не удалось прикрепить фото")
-                }
-            }
-        }
-    }
-    
-    private fun showAssignConfirmDialog(member: FamilyMember) {
-        MaterialAlertDialogBuilder(this)
-            .setTitle("Прикрепить фото?")
-            .setMessage("Прикрепить выбранное фото к ${member.firstName} ${member.lastName}?")
-            .setPositiveButton("Да") { _, _ ->
-                assignPhotoToMember(member)
-            }
-            .setNegativeButton("Отмена", null)
-            .show()
-    }
-    
-    private fun assignPhotoToMember(member: FamilyMember) {
-        val bitmap = selectedBitmap ?: return
-        
-        CoroutineScope(Dispatchers.IO).launch {
-            val saved = savePhotoToMember(member.id, "${member.firstName} ${member.lastName}", bitmap)
-            
-            withContext(Dispatchers.Main) {
-                if (saved) {
-                    toast("✓ Фото прикреплено к ${member.firstName}")
-                    clearSelection()
-                } else {
-                    toast("⚠️ Это фото уже прикреплено")
-                }
-            }
-        }
-    }
-    
-    private suspend fun savePhotoToMember(memberId: Long, memberName: String, bitmap: Bitmap): Boolean {
-        return try {
-            val database = FamilyDatabase.getDatabase(applicationContext)
-            
-            // Проверяем дубликаты
-            val imageHash = calculateImageHash(bitmap)
-            val existingPhotos = database.memberPhotoDao().getPhotosForMemberSync(memberId)
-            
-            for (existingPhoto in existingPhotos) {
-                val existingFile = File(existingPhoto.photoUri)
-                if (existingFile.exists()) {
-                    val existingBitmap = android.graphics.BitmapFactory.decodeFile(existingFile.absolutePath)
-                    if (existingBitmap != null) {
-                        val existingHash = calculateImageHash(existingBitmap)
-                        existingBitmap.recycle()
-                        
-                        if (existingHash == imageHash) {
-                            return false // Дубликат
+                    recognitions.forEach { recognition ->
+                        val bucket = recognized.getOrPut(recognition.memberId) {
+                            RecognizedMemberBucket(recognition.memberName, mutableListOf())
+                        }
+                        if (bucket.photoUris.none { it.toString() == uri.toString() }) {
+                            bucket.photoUris.add(uri)
                         }
                     }
                 }
+            } else {
+                val error = result.exceptionOrNull()
+                val errorMessage = error?.message
+                val reason = if (isNoMatchError(errorMessage)) {
+                    noMatchCount++
+                    PendingReason.NO_MATCH
+                } else {
+                    apiErrorCount++
+                    PendingReason.API_ERROR
+                }
+                pending.add(PendingManualPhoto(uri, reason, errorMessage))
             }
-            
-            // Сохраняем фото
+        }
+
+        return BatchRecognitionResult(
+            recognized = LinkedHashMap(recognized),
+            pending = pending
+        )
+    }
+
+    private fun showRecognizedAssignmentsDialog(recognizedMap: LinkedHashMap<String, RecognizedMemberBucket>) {
+        val entries = recognizedMap.entries.toList()
+        val items = entries.map { (_, bucket) ->
+            "${bucket.memberName} (${bucket.photoUris.size} фото)"
+        }.toTypedArray()
+
+        val checked = BooleanArray(items.size) { true }
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("AI нашел совпадения")
+            .setMessage("Выберите, кому прикрепить распознанные фото")
+            .setMultiChoiceItems(items, checked) { _, which, isChecked ->
+                checked[which] = isChecked
+            }
+            .setPositiveButton("Прикрепить") { _, _ ->
+                binding.progressBar.visibility = View.VISIBLE
+                CoroutineScope(Dispatchers.Main).launch {
+                    saveRecognizedAssignments(entries, checked)
+                    binding.progressBar.visibility = View.GONE
+                    handleManualStageOrFinish()
+                }
+            }
+            .setNegativeButton("Пропустить") { _, _ ->
+                handleManualStageOrFinish()
+            }
+            .setCancelable(false)
+            .show()
+    }
+
+    private suspend fun saveRecognizedAssignments(
+        entries: List<Map.Entry<String, RecognizedMemberBucket>>,
+        checked: BooleanArray
+    ) {
+        for (index in entries.indices) {
+            if (!checked[index]) {
+                continue
+            }
+
+            val (serverMemberId, bucket) = entries[index]
+            val localMemberId = try {
+                UniqueIdHelper.fromServerId(serverMemberId.toLong())
+            } catch (_: Exception) {
+                autoErrorCount++
+                continue
+            }
+            val memberName = bucket.memberName.ifBlank { "Без имени" }
+
+            for (uri in bucket.photoUris) {
+                when (savePhotoUriToMember(localMemberId, memberName, uri)) {
+                    SavePhotoResult.SAVED -> {
+                        autoSavedCount++
+                        autoAssignedByMember[memberName] = (autoAssignedByMember[memberName] ?: 0) + 1
+                    }
+                    SavePhotoResult.DUPLICATE -> autoDuplicateCount++
+                    SavePhotoResult.ERROR -> autoErrorCount++
+                }
+            }
+        }
+    }
+
+    private fun buildAutoAssignmentReport(): String {
+        if (autoAssignedByMember.isEmpty()) {
+            return "AI отчет: новых прикреплений не было"
+        }
+
+        val sorted = autoAssignedByMember.entries.sortedWith(
+            compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key }
+        )
+
+        return buildString {
+            append("AI отчет по прикреплению:")
+            for ((memberName, count) in sorted) {
+                append("\n- ")
+                append(memberName)
+                append(": ")
+                append(count)
+                append(" фото")
+            }
+        }
+    }
+
+    private fun handleManualStageOrFinish() {
+        if (pendingManualPhotos.isEmpty()) {
+            memberAdapter.setSelectionEnabled(false)
+            binding.cardPendingManual.visibility = View.GONE
+            finishSessionAndResetUi()
+            return
+        }
+
+        binding.cardPendingManual.visibility = View.VISIBLE
+        binding.tvSyncStatus.visibility = View.VISIBLE
+        binding.tvSyncStatus.setTextColor(getColor(R.color.green_accent))
+        binding.tvSyncStatus.text = buildString {
+            append("AI готово. Прикреплено: $autoSavedCount")
+            if (autoDuplicateCount > 0) append(", дубликатов: $autoDuplicateCount")
+            if (autoErrorCount > 0) append(", ошибок: $autoErrorCount")
+            append("\n")
+            append(buildAutoAssignmentReport())
+            append("\nНеразобранных фото: ${pendingManualPhotos.size}. Выберите фото и члена семьи.")
+        }
+
+        memberAdapter.setSelectionEnabled(true)
+        refreshPendingUi()
+        updateActionButtons()
+    }
+
+    private fun refreshPendingUi() {
+        if (pendingManualPhotos.isEmpty()) {
+            binding.cardPendingManual.visibility = View.GONE
+            pendingAdapter.submitList(emptyList())
+            return
+        }
+
+        binding.cardPendingManual.visibility = View.VISIBLE
+        binding.tvPendingManualHint.text = buildPendingHintText()
+
+        val items = pendingManualPhotos.mapIndexed { index, pendingPhoto ->
+            PendingPhotoAssignmentAdapter.PendingPhotoUiItem(
+                uri = pendingPhoto.uri,
+                reasonText = reasonToText(pendingPhoto),
+                errorText = pendingPhoto.error,
+                isSelected = index == activePendingIndex
+            )
+        }
+        pendingAdapter.submitList(items)
+    }
+
+    private fun buildPendingHintText(): String {
+        val hintText = if (activePendingIndex == null) {
+            "Выберите фото сверху, затем прокрутите ниже до блока \"Члены семьи\" и нажмите нужного человека"
+        } else {
+            "Фото выбрано. Прокрутите ниже до блока \"Члены семьи\" и нажмите нужного человека"
+        }
+        return hintText
+
+    }
+
+    private fun scrollToMembersSection() {
+        binding.root.post {
+            binding.root.smoothScrollTo(0, binding.cardMembers.top)
+        }
+    }
+
+    private fun handleMemberClick(member: FamilyMember) {
+        if (pendingManualPhotos.isEmpty()) {
+            toast("Сначала запустите AI-распознавание")
+            return
+        }
+
+        val currentIndex = activePendingIndex
+        if (currentIndex == null || currentIndex !in pendingManualPhotos.indices) {
+            toast("Выберите фото из списка неразобранных")
+            return
+        }
+
+        val pendingPhoto = pendingManualPhotos[currentIndex]
+        val memberName = "${member.firstName} ${member.lastName}".trim()
+
+        binding.progressBar.visibility = View.VISIBLE
+        memberAdapter.setSelectionEnabled(false)
+
+        CoroutineScope(Dispatchers.Main).launch {
+            when (savePhotoUriToMember(member.id, memberName, pendingPhoto.uri)) {
+                SavePhotoResult.SAVED -> {
+                    manualSavedCount++
+                    toast("Фото прикреплено к ${member.firstName}")
+                    removePendingPhoto(currentIndex)
+                }
+                SavePhotoResult.DUPLICATE -> {
+                    manualDuplicateCount++
+                    toast("Это фото уже прикреплено к ${member.firstName}")
+                    removePendingPhoto(currentIndex)
+                }
+                SavePhotoResult.ERROR -> {
+                    manualErrorCount++
+                    toast("Ошибка сохранения фото")
+                    memberAdapter.setSelectionEnabled(true)
+                }
+            }
+
+            binding.progressBar.visibility = View.GONE
+        }
+    }
+
+    private fun removePendingPhoto(index: Int) {
+        if (index !in pendingManualPhotos.indices) {
+            return
+        }
+
+        pendingManualPhotos.removeAt(index)
+        activePendingIndex = null
+
+        if (pendingManualPhotos.isEmpty()) {
+            memberAdapter.setSelectionEnabled(false)
+            binding.cardPendingManual.visibility = View.GONE
+            finishSessionAndResetUi()
+        } else {
+            memberAdapter.setSelectionEnabled(true)
+            refreshPendingUi()
+            binding.tvSyncStatus.text = buildString {
+                append("AI прикреплено: $autoSavedCount")
+                if (autoDuplicateCount > 0) append(", дубликатов: $autoDuplicateCount")
+                if (autoErrorCount > 0) append(", ошибок: $autoErrorCount")
+                append("\n")
+                append(buildAutoAssignmentReport())
+                append("\nНеразобранных фото: ${pendingManualPhotos.size}. Выберите следующее фото.")
+            }
+        }
+
+        updateActionButtons()
+    }
+
+    private fun finishSessionAndResetUi() {
+        binding.tvSyncStatus.visibility = View.VISIBLE
+        binding.tvSyncStatus.setTextColor(getColor(R.color.green_accent))
+        binding.tvSyncStatus.text = buildFinalSummary()
+
+        selectedPhotoUris.clear()
+        pendingManualPhotos.clear()
+        activePendingIndex = null
+
+        resetSelectionUi(keepStatus = true)
+        updateActionButtons()
+    }
+
+    private fun buildFinalSummary(): String {
+        return buildString {
+            append("Готово. Обработано фото: $lastBatchSelectedCount\n")
+            append("AI прикрепил: $autoSavedCount")
+            if (autoDuplicateCount > 0) append(", дубликатов: $autoDuplicateCount")
+            if (autoErrorCount > 0) append(", ошибок: $autoErrorCount")
+            append("\n")
+            append(buildAutoAssignmentReport())
+            append("\nРучной режим: $manualSavedCount")
+            if (manualDuplicateCount > 0) append(", дубликатов: $manualDuplicateCount")
+            if (manualErrorCount > 0) append(", ошибок: $manualErrorCount")
+            append("\nНе распознано AI: $noMatchCount")
+            if (apiErrorCount > 0) append(" | Ошибки API: $apiErrorCount")
+            if (decodeErrorCount > 0) append(" | Ошибки чтения: $decodeErrorCount")
+        }
+    }
+
+    private fun resetCounters() {
+        autoSavedCount = 0
+        autoDuplicateCount = 0
+        autoErrorCount = 0
+        autoAssignedByMember.clear()
+        manualSavedCount = 0
+        manualDuplicateCount = 0
+        manualErrorCount = 0
+        noMatchCount = 0
+        apiErrorCount = 0
+        decodeErrorCount = 0
+    }
+
+    private fun resetBatchStateForNewSelection() {
+        selectedPhotoUris.clear()
+        pendingManualPhotos.clear()
+        activePendingIndex = null
+        resetCounters()
+        binding.cardPendingManual.visibility = View.GONE
+        pendingAdapter.submitList(emptyList())
+        memberAdapter.setSelectionEnabled(false)
+    }
+
+    private fun resetSelectionUi(keepStatus: Boolean = false) {
+        binding.cardPhotoPreview.visibility = View.GONE
+        binding.layoutEmptyState.visibility = View.VISIBLE
+        if (!keepStatus) {
+            binding.tvSyncStatus.visibility = View.GONE
+        }
+        binding.cardPendingManual.visibility = View.GONE
+
+        binding.tvStep1.text = "1. Выбрать фото (до 20)"
+        binding.tvStep1.setTextColor(getColor(R.color.purple_button))
+        binding.tvStep1.setTypeface(null, android.graphics.Typeface.BOLD)
+        binding.tvStep1.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_photo_library, 0, 0, 0)
+
+        binding.tvStep2.text = "2. AI + ручное назначение"
+        binding.tvStep2.setTextColor(getColor(R.color.text_tertiary_light))
+        binding.tvStep2.setTypeface(null, android.graphics.Typeface.NORMAL)
+    }
+
+    private fun updateActionButtons() {
+        binding.btnSelectPhoto.isEnabled = true
+        binding.btnAutoRecognize.isEnabled =
+            isServerConnected && selectedPhotoUris.isNotEmpty() && pendingManualPhotos.isEmpty()
+    }
+
+    private fun reasonToText(photo: PendingManualPhoto): String {
+        return when (photo.reason) {
+            PendingReason.NO_MATCH -> "Не распознано AI"
+            PendingReason.API_ERROR -> "Ошибка API"
+            PendingReason.DECODE_ERROR -> "Ошибка чтения фото"
+        }
+    }
+
+    private fun isNoMatchError(message: String?): Boolean {
+        if (message.isNullOrBlank()) return false
+        val normalized = message.lowercase(Locale.getDefault())
+        return normalized.contains("не распозн") ||
+            normalized.contains("не найден") ||
+            normalized.contains("no face") ||
+            normalized.contains("no faces") ||
+            normalized.contains("not recognized")
+    }
+
+    private suspend fun savePhotoUriToMember(memberId: Long, memberName: String, uri: Uri): SavePhotoResult {
+        return withContext(Dispatchers.IO) {
+            val bitmap = decodeBitmapFromUri(uri) ?: return@withContext SavePhotoResult.ERROR
+            try {
+                savePhotoToMember(memberId, memberName, bitmap)
+            } finally {
+                bitmap.recycle()
+            }
+        }
+    }
+
+    private fun decodeBitmapFromUri(uri: Uri): Bitmap? {
+        return try {
+            contentResolver.openInputStream(uri)?.use { input ->
+                BitmapFactory.decodeStream(input)
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private suspend fun savePhotoToMember(memberId: Long, memberName: String, bitmap: Bitmap): SavePhotoResult {
+        return try {
+            val database = FamilyDatabase.getDatabase(applicationContext)
+            val imageHash = calculateImageHash(bitmap)
+            val existingPhotos = database.memberPhotoDao().getPhotosForMemberSync(memberId)
+
+            for (existingPhoto in existingPhotos) {
+                val existingFile = File(existingPhoto.photoUri)
+                if (!existingFile.exists()) continue
+
+                val existingBitmap = BitmapFactory.decodeFile(existingFile.absolutePath) ?: continue
+                val existingHash = calculateImageHash(existingBitmap)
+                existingBitmap.recycle()
+
+                if (existingHash == imageHash) {
+                    return SavePhotoResult.DUPLICATE
+                }
+            }
+
             val filename = "photo_${memberId}_${System.currentTimeMillis()}.jpg"
             val file = File(filesDir, filename)
-            
             FileOutputStream(file).use { out ->
                 bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
             }
-            
+
             val photo = MemberPhoto(
                 memberId = memberId,
                 photoUri = file.absolutePath,
                 dateAdded = System.currentTimeMillis()
             )
-            
             database.memberPhotoDao().insertPhoto(photo)
-            true
-            
+            SavePhotoResult.SAVED
         } catch (e: Exception) {
-            android.util.Log.e("PhotoAssignment", "Ошибка сохранения фото", e)
-            false
+            android.util.Log.e("PhotoAssignment", "Save error for $memberName", e)
+            SavePhotoResult.ERROR
         }
     }
-    
+
     private fun calculateImageHash(bitmap: Bitmap): String {
         val smallBitmap = Bitmap.createScaledBitmap(bitmap, 8, 8, false)
-        
         var totalBrightness = 0
+
         for (x in 0 until 8) {
             for (y in 0 until 8) {
                 val pixel = smallBitmap.getPixel(x, y)
@@ -608,9 +882,10 @@ class PhotoAssignmentActivity : AppCompatActivity() {
                 totalBrightness += (r + g + b) / 3
             }
         }
+
         val avgBrightness = totalBrightness / 64
-        
         val hash = StringBuilder()
+
         for (x in 0 until 8) {
             for (y in 0 until 8) {
                 val pixel = smallBitmap.getPixel(x, y)
@@ -621,33 +896,8 @@ class PhotoAssignmentActivity : AppCompatActivity() {
                 hash.append(if (brightness >= avgBrightness) "1" else "0")
             }
         }
-        
+
         smallBitmap.recycle()
         return hash.toString()
-    }
-    
-    private fun clearSelection() {
-        selectedBitmap?.recycle()
-        selectedBitmap = null
-        selectedUri = null
-        
-        // Скрываем превью, показываем пустое состояние
-        binding.cardPhotoPreview.visibility = View.GONE
-        binding.layoutEmptyState.visibility = View.VISIBLE
-        binding.tvSyncStatus.visibility = View.GONE
-        
-        // Сбрасываем пошаговый индикатор
-        binding.tvStep1.text = "1. Выбрать фото"
-        binding.tvStep1.setTextColor(getColor(R.color.purple_button))
-        binding.tvStep1.setTypeface(null, android.graphics.Typeface.BOLD)
-        binding.tvStep1.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_photo_library, 0, 0, 0)
-        binding.tvStep2.text = "2. Выбрать человека"
-        binding.tvStep2.setTextColor(getColor(R.color.text_tertiary_light))
-        binding.tvStep2.setTypeface(null, android.graphics.Typeface.NORMAL)
-    }
-    
-    override fun onDestroy() {
-        super.onDestroy()
-        selectedBitmap?.recycle()
     }
 }

@@ -1,14 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:scrollbars="none"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/gradient_primary"
+    android:fillViewport="true"
     android:fitsSystemWindows="true">
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
         android:orientation="vertical"
         android:padding="16dp">
 
@@ -86,18 +88,23 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:gravity="center"
+                    android:gravity="center_vertical"
+                    android:baselineAligned="false"
                     android:layout_marginBottom="12dp">
 
                     <TextView
                         android:id="@+id/tvStep1"
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:text="1. Выбрать фото"
-                        android:textSize="13sp"
+                        android:layout_weight="1"
+                        android:text="1. Выбрать фото (до 20)"
+                        android:textSize="12sp"
                         android:textStyle="bold"
                         android:textColor="@color/purple_button"
                         android:padding="8dp"
+                        android:maxLines="2"
+                        android:ellipsize="end"
+                        android:gravity="start|center_vertical"
                         android:drawableStart="@drawable/ic_photo_library"
                         android:drawablePadding="4dp"
                         android:drawableTint="@color/purple_button"/>
@@ -112,12 +119,17 @@
 
                     <TextView
                         android:id="@+id/tvStep2"
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:text="2. Выбрать человека"
-                        android:textSize="13sp"
+                        android:layout_weight="1"
+                        android:text="2. AI + ручное назначение"
+                        android:textSize="12sp"
                         android:textColor="@color/text_tertiary_light"
                         android:padding="8dp"
+                        android:maxLines="2"
+                        android:ellipsize="end"
+                        android:gravity="end|center_vertical"
+                        android:textAlignment="viewEnd"
                         android:drawableStart="@drawable/ic_person"
                         android:drawablePadding="4dp"
                         android:drawableTint="@color/text_tertiary_light"/>
@@ -240,6 +252,50 @@
             android:layout_marginBottom="12dp"
             android:visibility="gone"/>
 
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardPendingManual"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="6dp"
+            app:cardBackgroundColor="?attr/colorSurface"
+            android:layout_marginBottom="12dp"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Неразобранные фото"
+                    android:textColor="@color/text_primary_light"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvPendingManualHint"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:layout_marginBottom="10dp"
+                    android:text="Выберите фото сверху, затем члена семьи снизу"
+                    android:textColor="@color/text_secondary_light"
+                    android:textSize="13sp" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:scrollbars="none"
+                    android:id="@+id/rvPendingManual"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:nestedScrollingEnabled="false"
+                    android:clipToPadding="false" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
         <ProgressBar
             android:id="@+id/progressBar"
             android:layout_width="wrap_content"
@@ -250,9 +306,9 @@
 
         <!-- Members List Card -->
         <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardMembers"
             android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
+            android:layout_height="wrap_content"
             app:cardCornerRadius="20dp"
             app:cardElevation="6dp"
             app:cardBackgroundColor="?attr/colorSurface"
@@ -260,7 +316,7 @@
 
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:padding="16dp">
 
@@ -299,9 +355,11 @@
                     android:visibility="gone"/>
 
                 <androidx.recyclerview.widget.RecyclerView
+                    android:scrollbars="none"
                     android:id="@+id/rvMembers"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
+                    android:layout_height="wrap_content"
+                    android:nestedScrollingEnabled="false"
                     android:clipToPadding="false"/>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -325,4 +383,4 @@
             android:enabled="false"/>
 
     </LinearLayout>
-</androidx.coordinatorlayout.widget.CoordinatorLayout>
+</androidx.core.widget.NestedScrollView>

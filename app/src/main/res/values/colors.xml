@@ -23,10 +23,10 @@
     <color name="blue_accent">#4A90E2</color>
     
     <!-- Card & Surface Colors -->
-    <color name="card_background_light">#FFFFFF</color>
-    <color name="card_background_gray">#F5F7FA</color>
-    <color name="surface_light">#FAFBFC</color>
-    <color name="gray_card">#F5F7FA</color> <!-- Legacy support for tree views -->
+    <color name="card_background_light">#F7F8FC</color>
+    <color name="card_background_gray">#EEF1F7</color>
+    <color name="surface_light">#F2F4FA</color>
+    <color name="gray_card">#EEF1F7</color> <!-- Legacy support for tree views -->
     <color name="dialog_background_purple">#E8E4FF</color> <!-- Light purple for dialogs -->
     
     <!-- Text Colors - Light Theme -->
@@ -50,7 +50,7 @@
     <color name="black">#000000</color>
     <color name="white">#FFFFFF</color>
     <color name="transparent">#00000000</color>
-    <color name="divider">#E5E7EB</color>
+    <color name="divider">#DEE4EF</color>
     <color name="divider_dark">#374151</color>
     
     <!-- Shadow & Overlay -->
@@ -69,13 +69,13 @@
     <!-- Enhanced UI Colors -->
     <color name="card_shadow">#14000000</color>
     <color name="card_shadow_medium">#1F000000</color>
-    <color name="input_background">#F8F9FC</color>
+    <color name="input_background">#F2F4FA</color>
     <color name="input_stroke">#E8EAF0</color>
     <color name="input_stroke_focused">#6C63FF</color>
     
     <!-- Subtle Backgrounds -->
-    <color name="bg_section">#F5F6FA</color>
-    <color name="bg_elevated">#FFFFFF</color>
+    <color name="bg_section">#EEF1F7</color>
+    <color name="bg_elevated">#F7F8FC</color>
     <color name="bg_pressed">#E8E4FF</color>
     
     <!-- Refined Gradient Colors -->
@@ -97,5 +97,5 @@
     <color name="ripple_dark">#336C63FF</color>
     
     <!-- Search -->
-    <color name="search_background">#FFFFFF</color>
+    <color name="search_background">#EEF2F8</color>
 </resources>

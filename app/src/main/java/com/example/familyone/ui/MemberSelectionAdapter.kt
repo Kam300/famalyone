@@ -27,6 +27,7 @@ class MemberSelectionAdapter(
     
     // Множество ID членов, зарегистрированных на сервере
     private val registeredMemberIds = mutableSetOf<String>()
+    private var selectionEnabled = true
     
     /**
      * Обновляет список зарегистрированных на сервере членов
@@ -34,6 +35,12 @@ class MemberSelectionAdapter(
     fun updateRegisteredMembers(memberIds: Set<String>) {
         registeredMemberIds.clear()
         registeredMemberIds.addAll(memberIds)
+        notifyDataSetChanged()
+    }
+
+    fun setSelectionEnabled(enabled: Boolean) {
+        if (selectionEnabled == enabled) return
+        selectionEnabled = enabled
         notifyDataSetChanged()
     }
     
@@ -110,8 +117,12 @@ class MemberSelectionAdapter(
                 }
             }
             
+            binding.root.alpha = if (selectionEnabled) 1f else 0.65f
+            binding.root.isEnabled = selectionEnabled
             binding.root.setOnClickListener {
-                onMemberClick(member)
+                if (selectionEnabled) {
+                    onMemberClick(member)
+                }
             }
         }
         

@@ -76,7 +76,7 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:fillViewport="true"
-        android:scrollbars="vertical"
+        android:scrollbars="none"
         android:scrollbarStyle="outsideInset"
         android:fadeScrollbars="false">
 

@@ -84,9 +84,6 @@ class AboutActivity : AppCompatActivity() {
             startActivity(Intent(this, OnboardingActivity::class.java))
         }
         
-        binding.btnPhotoGallery.setOnClickListener {
-            startActivity(Intent(this, PhotoGalleryActivity::class.java))
-        }
     }
     
     private fun checkForUpdates() {
