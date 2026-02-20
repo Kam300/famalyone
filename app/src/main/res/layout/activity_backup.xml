@@ -37,9 +37,9 @@
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.core.widget.NestedScrollView
-        android:scrollbars="none"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:scrollbars="none"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <LinearLayout
@@ -48,7 +48,6 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- Local Backup Section -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -65,16 +64,16 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="📱 Локальное копирование"
+                        android:text="Локальный backup (fallback)"
+                        android:textColor="?attr/colorOnSurface"
                         android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:textColor="?attr/colorOnSurface" />
+                        android:textStyle="bold" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="Сохранение в папку Downloads"
+                        android:text="Экспорт/импорт JSON на устройство"
                         android:textColor="?attr/colorOnSurfaceVariant"
                         android:textSize="14sp" />
 
@@ -91,24 +90,23 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="16dp"
-                        android:text="📤 Экспорт в файл"
+                        android:text="Экспорт в файл"
                         app:icon="@drawable/ic_export"
                         app:cornerRadius="12dp" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnLocalImport"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="📥 Импорт из файла"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:text="Импорт из файла"
                         app:cornerRadius="12dp" />
 
                 </LinearLayout>
 
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Google Drive Section -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -124,16 +122,16 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="☁️ Google Drive"
+                        android:text="Серверный backup (Google OAuth)"
+                        android:textColor="?attr/colorOnSurface"
                         android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:textColor="?attr/colorOnSurface" />
+                        android:textStyle="bold" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="Автоматическое облачное хранение"
+                        android:text="Единый backend для Android и будущего Web"
                         android:textColor="?attr/colorOnSurfaceVariant"
                         android:textSize="14sp" />
 
@@ -145,7 +143,6 @@
                         android:layout_marginTop="8dp"
                         android:visibility="gone" />
 
-                    <!-- Signed Out State -->
                     <LinearLayout
                         android:id="@+id/layoutGoogleSignedOut"
                         android:layout_width="match_parent"
@@ -157,7 +154,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="12dp"
-                            android:text="Войдите для резервного копирования в облако"
+                            android:text="Войдите в Google для защищенного backup"
                             android:textColor="?attr/colorOnSurfaceVariant"
                             android:textSize="14sp" />
 
@@ -166,13 +163,12 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="12dp"
-                            android:text="Войти в Google"
+                            android:text="Войти через Google"
                             app:icon="@drawable/ic_google"
                             app:cornerRadius="12dp" />
 
                     </LinearLayout>
 
-                    <!-- Signed In State -->
                     <LinearLayout
                         android:id="@+id/layoutGoogleSignedIn"
                         android:layout_width="match_parent"
@@ -185,36 +181,61 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="12dp"
-                            android:text="✓ user@gmail.com"
                             android:textColor="@color/green_accent"
                             android:textSize="14sp"
                             android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvDriveStatus"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="Нет данных о backup"
+                            android:textColor="?attr/colorOnSurfaceVariant"
+                            android:textSize="14sp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnDriveRefresh"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:text="Обновить статус"
+                            app:cornerRadius="12dp" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnDriveBackup"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="12dp"
-                            android:text="☁️ Создать бэкап"
+                            android:layout_marginTop="8dp"
+                            android:text="Создать и загрузить backup"
                             app:cornerRadius="12dp" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnDriveRestore"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
-                            android:text="↩️ Восстановить из бэкапа"
+                            android:text="Восстановить из облака"
+                            app:cornerRadius="12dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnDriveDelete"
                             style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="Удалить облачный backup"
                             app:cornerRadius="12dp" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnGoogleSignOut"
+                            style="@style/Widget.Material3.Button.TextButton"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
-                            android:text="🚪 Выйти"
-                            style="@style/Widget.Material3.Button.TextButton"
-                            app:cornerRadius="12dp" />
+                            android:text="Выйти" />
 
                     </LinearLayout>
 

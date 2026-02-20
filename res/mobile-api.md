@@ -6,6 +6,10 @@ Base URL (recommended):
 
 Legacy URL without `/api` also exists, but new clients should use `/api`.
 
+Google OAuth + backup setup guide:
+
+- `res/backup-server-setup.md`
+
 ## 1) Health check
 
 - Method: `GET`
@@ -131,6 +135,86 @@ Example:
 
 ```bash
 curl -L "https://totalcode.indevs.in/api/download_pdf/DRIVE_ID" -o family_tree.pdf
+```
+
+## 9) Upload backup archive
+
+- Method: `POST`
+- URL: `/backup/upload`
+- Auth: `Authorization: Bearer <google_id_token>`
+- Body: `multipart/form-data` with file field `backup_file`
+- Limits: server validates `BACKUP_MAX_FILE_MB` and archive structure/schema.
+
+Expected JSON fields on success:
+
+- `success=true`
+- `exists=true`
+- `schemaVersion`
+- `createdAtUtc`
+- `sizeBytes`
+- `membersCount`
+- `memberPhotosCount`
+- `assetsCount`
+- `compression`
+- `checksumSha256`
+
+Example:
+
+```bash
+curl -X POST "https://totalcode.indevs.in/api/backup/upload" \
+  -H "Authorization: Bearer GOOGLE_ID_TOKEN" \
+  -F "backup_file=@familyone_backup.zip;type=application/zip"
+```
+
+## 10) Get backup metadata
+
+- Method: `GET`
+- URL: `/backup/meta`
+- Auth: `Authorization: Bearer <google_id_token>`
+
+Responses:
+
+- no backup: `success=true`, `exists=false`, `schemaVersion`
+- backup exists: `success=true`, `exists=true` + metadata fields
+
+Example:
+
+```bash
+curl -X GET "https://totalcode.indevs.in/api/backup/meta" \
+  -H "Authorization: Bearer GOOGLE_ID_TOKEN"
+```
+
+## 11) Download backup archive
+
+- Method: `GET`
+- URL: `/backup/download`
+- Auth: `Authorization: Bearer <google_id_token>`
+
+Example:
+
+```bash
+curl -L "https://totalcode.indevs.in/api/backup/download" \
+  -H "Authorization: Bearer GOOGLE_ID_TOKEN" \
+  -o familyone_backup.zip
+```
+
+## 12) Delete backup archive
+
+- Method: `DELETE`
+- URL: `/backup`
+- Auth: `Authorization: Bearer <google_id_token>`
+
+Response:
+
+- `success=true`
+- `schemaVersion`
+- `deleted` (`true` if file existed and was removed)
+
+Example:
+
+```bash
+curl -X DELETE "https://totalcode.indevs.in/api/backup" \
+  -H "Authorization: Bearer GOOGLE_ID_TOKEN"
 ```
 
 ## Mobile client rules

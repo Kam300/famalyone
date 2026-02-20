@@ -11,6 +11,9 @@ interface MemberPhotoDao {
     
     @Query("SELECT * FROM member_photos WHERE memberId = :memberId ORDER BY dateAdded DESC")
     suspend fun getPhotosForMemberSync(memberId: Long): List<MemberPhoto>
+
+    @Query("SELECT * FROM member_photos ORDER BY dateAdded DESC")
+    suspend fun getAllPhotosSync(): List<MemberPhoto>
     
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPhoto(photo: MemberPhoto): Long
