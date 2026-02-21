@@ -31,10 +31,12 @@ object BackupApi {
 
     private const val TAG = "BackupApi"
     private const val USER_AGENT = "FamilyOneBackup/1.0"
+    private const val DEVICE_HEADER = "X-FamilyOne-Device"
     private val zipMediaType = "application/zip".toMediaType()
 
     // Canonical base URL with /api.
     private var serverUrl = ApiServerConfig.DEFAULT_BASE_URL
+    private var backupDeviceId: String = ""
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(120, TimeUnit.SECONDS)
@@ -56,6 +58,11 @@ object BackupApi {
         val normalized = ApiServerConfig.normalizeBaseUrl(url)
         serverUrl = normalized
         Log.d(TAG, "Normalized base URL: $normalized")
+    }
+
+    fun setBackupDeviceId(deviceId: Long) {
+        backupDeviceId = deviceId.toString()
+        Log.d(TAG, "Backup device id configured: $backupDeviceId")
     }
 
     suspend fun getMeta(idToken: String): Result<BackupRemoteMeta> = withContext(Dispatchers.IO) {
@@ -107,8 +114,8 @@ object BackupApi {
                 val request = Request.Builder()
                     .url(url)
                     .get()
-                    .addHeader("Authorization", "Bearer $idToken")
                     .addHeader("User-Agent", USER_AGENT)
+                    .applyBackupAuthHeaders(idToken)
                     .build()
 
                 try {
@@ -179,8 +186,8 @@ object BackupApi {
             val url = "$baseUrl/$endpoint"
             val requestBuilder = Request.Builder()
                 .url(url)
-                .addHeader("Authorization", "Bearer $idToken")
                 .addHeader("User-Agent", USER_AGENT)
+                .applyBackupAuthHeaders(idToken)
 
             when (method) {
                 "GET" -> requestBuilder.get()
@@ -250,8 +257,8 @@ object BackupApi {
             val request = Request.Builder()
                 .url(url)
                 .post(multipartBody)
-                .addHeader("Authorization", "Bearer $idToken")
                 .addHeader("User-Agent", USER_AGENT)
+                .applyBackupAuthHeaders(idToken)
                 .build()
 
             try {
@@ -324,5 +331,16 @@ object BackupApi {
         val bodyText = body.trim()
         val snippet = if (bodyText.length > 600) bodyText.take(600) + "..." else bodyText
         return "HTTP $code for $endpoint: $snippet"
+    }
+
+    private fun Request.Builder.applyBackupAuthHeaders(idToken: String): Request.Builder {
+        val token = idToken.trim()
+        if (token.isNotEmpty()) {
+            addHeader("Authorization", "Bearer $token")
+        }
+        if (backupDeviceId.isNotBlank()) {
+            addHeader(DEVICE_HEADER, backupDeviceId)
+        }
+        return this
     }
 }

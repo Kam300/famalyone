@@ -22,6 +22,7 @@ import com.example.familyone.utils.BackupArchiveManager
 import com.example.familyone.utils.BackupManager
 import com.example.familyone.utils.FaceSyncManager
 import com.example.familyone.utils.GoogleAuthManager
+import com.example.familyone.utils.UniqueIdHelper
 import com.example.familyone.utils.toast
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
@@ -77,6 +78,7 @@ class BackupActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("app_settings", MODE_PRIVATE)
         val serverUrl = ApiServerConfig.readUnifiedServerUrl(prefs)
         BackupApi.setServerUrl(serverUrl)
+        BackupApi.setBackupDeviceId(UniqueIdHelper.getDeviceId(this))
         FaceRecognitionApi.setServerUrl(serverUrl)
 
         setupClickListeners()
