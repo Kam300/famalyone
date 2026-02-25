@@ -2,6 +2,8 @@ package com.example.familyone.utils
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.provider.Settings
+import java.util.Locale
 
 object UniqueIdHelper {
     
@@ -16,8 +18,24 @@ object UniqueIdHelper {
         var deviceId = prefs.getLong(KEY_DEVICE_ID, 0L)
         
         if (deviceId == 0L) {
-            // Генерируем уникальный ID на основе времени
-            deviceId = System.currentTimeMillis() % 1000000 // Последние 6 цифр
+            // Стабильный ID на базе ANDROID_ID, чтобы не менять server IDs после переустановки.
+            val androidId = try {
+                Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+                    ?.trim()
+                    .orEmpty()
+            } catch (_: Exception) {
+                ""
+            }
+
+            deviceId = if (androidId.isNotEmpty()) {
+                val normalized = androidId.lowercase(Locale.US)
+                val positiveHash = normalized.hashCode().toLong() and 0x7fffffffL
+                (positiveHash % 900000L) + 100000L
+            } else {
+                // Fallback для редких случаев, когда ANDROID_ID недоступен.
+                (System.currentTimeMillis() % 900000L) + 100000L
+            }
+
             prefs.edit().putLong(KEY_DEVICE_ID, deviceId).apply()
             android.util.Log.d("UniqueIdHelper", "🆔 Создан device ID: $deviceId")
         }

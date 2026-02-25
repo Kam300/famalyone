@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout 
+<androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -9,13 +9,13 @@
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        app:cardBackgroundColor="?attr/colorSurface"
         app:cardCornerRadius="24dp"
         app:cardElevation="8dp"
-        app:cardBackgroundColor="?attr/colorSurface"
-        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        app:layout_constraintTop_toTopOf="parent">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -23,51 +23,51 @@
             android:orientation="vertical"
             android:padding="24dp">
 
-            <!-- Icon -->
             <ImageView
                 android:layout_width="64dp"
                 android:layout_height="64dp"
                 android:layout_gravity="center"
+                android:layout_marginBottom="20dp"
                 android:src="@drawable/ic_info"
-                app:tint="@color/purple_button"
-                android:layout_marginBottom="20dp"/>
+                app:tint="@color/purple_button" />
 
-            <!-- Title -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Политика конфиденциальности"
-                android:textSize="20sp"
-                android:textStyle="bold"
-                android:textColor="@color/text_primary_light"
+                android:layout_marginBottom="16dp"
                 android:gravity="center"
-                android:layout_marginBottom="16dp"/>
+                android:text="@string/privacy_policy_title"
+                android:textColor="@color/text_primary_light"
+                android:textSize="20sp"
+                android:textStyle="bold" />
 
-            <!-- Policy Text -->
             <ScrollView
-                android:scrollbars="none"
                 android:layout_width="match_parent"
                 android:layout_height="200dp"
-                android:layout_marginBottom="16dp">
+                android:layout_marginBottom="16dp"
+                android:scrollbars="none">
 
                 <TextView
+                    android:id="@+id/tvPrivacyPolicy"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/privacy_policy_text"
-                    android:textSize="13sp"
+                    android:autoLink="web"
+                    android:lineSpacingExtra="4dp"
+                    android:linksClickable="true"
+                    android:text="@string/privacy_policy_text_project"
                     android:textColor="@color/text_secondary_light"
-                    android:lineSpacingExtra="4dp"/>
+                    android:textColorLink="@color/purple_button"
+                    android:textSize="13sp" />
             </ScrollView>
 
-            <!-- Consent Checkbox -->
             <com.google.android.material.checkbox.MaterialCheckBox
                 android:id="@+id/cbPrivacyConsent"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Я прочитал(а) и принимаю политику конфиденциальности"
+                android:buttonTint="@color/purple_button"
+                android:text="@string/privacy_policy_accept_label"
                 android:textColor="@color/text_primary_light"
-                android:textSize="14sp"
-                android:buttonTint="@color/purple_button"/>
+                android:textSize="14sp" />
 
         </LinearLayout>
 

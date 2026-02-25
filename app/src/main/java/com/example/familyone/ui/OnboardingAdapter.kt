@@ -3,6 +3,7 @@ package com.example.familyone.ui
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.text.method.LinkMovementMethod
 import androidx.biometric.BiometricManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.familyone.R
@@ -52,7 +53,7 @@ class OnboardingAdapter(
         OnboardingPage(
             title = "AI Распознавание лиц",
             description = "Загружайте фото, и нейросеть автоматически определит, кто на них изображён из вашей семьи",
-            iconRes = R.drawable.ic_auto_fix
+            iconRes = R.drawable.ic_face_ai
         ),
         OnboardingPage(
             title = "Оставайтесь на связи",
@@ -137,6 +138,8 @@ class OnboardingAdapter(
     ) : RecyclerView.ViewHolder(binding.root) {
         
         fun bind() {
+            binding.tvPrivacyPolicy.movementMethod = LinkMovementMethod.getInstance()
+            binding.tvPrivacyPolicy.linksClickable = true
             binding.cbPrivacyConsent.setOnCheckedChangeListener { _, isChecked ->
                 onConsentChanged?.invoke(isChecked)
             }

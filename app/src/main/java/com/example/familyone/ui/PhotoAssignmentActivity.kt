@@ -454,6 +454,7 @@ class PhotoAssignmentActivity : AppCompatActivity() {
     private suspend fun processBatchRecognition(): BatchRecognitionResult {
         val recognized = linkedMapOf<String, RecognizedMemberBucket>()
         val pending = mutableListOf<PendingManualPhoto>()
+        val deviceId = UniqueIdHelper.getDeviceId(applicationContext)
 
         for ((index, uri) in selectedPhotoUris.withIndex()) {
             binding.tvSyncStatus.text = "AI: обработка ${index + 1} из ${selectedPhotoUris.size}"
@@ -465,7 +466,7 @@ class PhotoAssignmentActivity : AppCompatActivity() {
                 continue
             }
 
-            val result = FaceRecognitionApi.recognizeFace(bitmap)
+            val result = FaceRecognitionApi.recognizeFace(bitmap, deviceId = deviceId)
             bitmap.recycle()
 
             if (result.isSuccess) {

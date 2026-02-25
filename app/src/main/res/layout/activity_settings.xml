@@ -507,7 +507,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="🔐 Безопасность"
+                        android:text="Безопасность"
                         android:textColor="@color/text_primary_light"
                         android:textSize="16sp"
                         android:textStyle="bold"
@@ -593,7 +593,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="💾 Резервное копирование"
+                        android:text="Резервное копирование"
                         android:textColor="@color/text_primary_light"
                         android:textSize="16sp"
                         android:textStyle="bold"
@@ -616,6 +616,51 @@
                     android:text="Открыть настройки бэкапа"
                     android:textSize="14sp"
                     app:cornerRadius="14dp"/>
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="8dp"
+            app:cardBackgroundColor="?attr/colorSurface"
+            android:layout_marginTop="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="24dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Опасная зона"
+                    android:textColor="@color/red_button"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Удалит все локальные данные и зарегистрированные лица на сервере для этого устройства."
+                    android:textColor="@color/text_secondary_light"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="12dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnDeleteAllData"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:text="Удалить все данные"
+                    android:textColor="@color/red_button"
+                    app:strokeColor="@color/red_button"
+                    app:strokeWidth="2dp"
+                    app:cornerRadius="14dp" />
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>

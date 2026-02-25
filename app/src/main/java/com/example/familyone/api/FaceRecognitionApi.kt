@@ -129,13 +129,17 @@ object FaceRecognitionApi {
 
     suspend fun recognizeFace(
         photo: Bitmap,
-        threshold: Double = 0.6
+        threshold: Double = 0.6,
+        deviceId: Long? = null
     ): Result<List<RecognitionResult>> = withContext(Dispatchers.IO) {
         try {
             val base64Image = bitmapToBase64(photo)
             val jsonBody = JSONObject().apply {
                 put("image", base64Image)
                 put("threshold", threshold)
+                if (deviceId != null && deviceId > 0) {
+                    put("device_id", deviceId)
+                }
             }
 
             val response = executeWithRouteFallback(
@@ -201,16 +205,21 @@ object FaceRecognitionApi {
         }
     }
 
-    suspend fun clearAll(): Result<String> = withContext(Dispatchers.IO) {
+    suspend fun clearAll(deviceId: Long? = null): Result<String> = withContext(Dispatchers.IO) {
         try {
+            val endpoint = if (deviceId != null && deviceId > 0) {
+                "clear_all?device_id=$deviceId"
+            } else {
+                "clear_all"
+            }
             val response = executeWithRouteFallback(
-                endpoint = "clear_all",
+                endpoint = endpoint,
                 method = "DELETE"
             )
             if (!response.isSuccessful) {
-                return@withContext Result.failure(httpError("clear_all", response))
+                return@withContext Result.failure(httpError(endpoint, response))
             }
-            val jsonResponse = parseJsonOrThrow(response, "clear_all")
+            val jsonResponse = parseJsonOrThrow(response, endpoint)
 
             if (jsonResponse.optBoolean("success", false)) {
                 Result.success(jsonResponse.optString("message", "Cleared"))

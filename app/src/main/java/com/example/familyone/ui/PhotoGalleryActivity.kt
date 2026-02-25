@@ -231,6 +231,7 @@ class PhotoGalleryActivity : AppCompatActivity() {
         
         CoroutineScope(Dispatchers.Main).launch {
             try {
+                val deviceId = com.example.familyone.utils.UniqueIdHelper.getDeviceId(applicationContext)
                 // Сохраняем результаты: memberId -> (memberName, список bitmap)
                 val allResults = mutableMapOf<String, Pair<String, MutableList<Bitmap>>>()
                 var processedCount = 0
@@ -241,7 +242,7 @@ class PhotoGalleryActivity : AppCompatActivity() {
                     binding.tvResult.text = "Обработано $processedCount из ${selectedPhotos.size}..."
                     
                     android.util.Log.d("PhotoGallery", "📤 Отправляем фото $processedCount на сервер...")
-                    val result = FaceRecognitionApi.recognizeFace(bitmap)
+                    val result = FaceRecognitionApi.recognizeFace(bitmap, deviceId = deviceId)
                     
                     result.onSuccess { recognitions ->
                         android.util.Log.d("PhotoGallery", "✅ Фото $processedCount: найдено ${recognitions.size} лиц")
@@ -294,7 +295,8 @@ class PhotoGalleryActivity : AppCompatActivity() {
         CoroutineScope(Dispatchers.Main).launch {
             try {
                 android.util.Log.d("PhotoGallery", "📤 Отправляем запрос на сервер...")
-                val result = FaceRecognitionApi.recognizeFace(bitmap)
+                val deviceId = com.example.familyone.utils.UniqueIdHelper.getDeviceId(applicationContext)
+                val result = FaceRecognitionApi.recognizeFace(bitmap, deviceId = deviceId)
                 
                 result.onSuccess { recognitions ->
                     android.util.Log.d("PhotoGallery", "✅ Получен ответ: ${recognitions.size} лиц")

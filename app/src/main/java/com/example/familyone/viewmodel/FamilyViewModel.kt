@@ -10,6 +10,7 @@ import com.example.familyone.data.FamilyDatabase
 import com.example.familyone.data.FamilyMember
 import com.example.familyone.data.FamilyRepository
 import com.example.familyone.data.FamilyRole
+import com.example.familyone.utils.UniqueIdHelper
 import kotlinx.coroutines.launch
 
 class FamilyViewModel(application: Application) : AndroidViewModel(application) {
@@ -53,17 +54,27 @@ class FamilyViewModel(application: Application) : AndroidViewModel(application) 
     }
     
     fun deleteAllMembers(onComplete: () -> Unit = {}) {
+        deleteAllMembersWithStatus { _, _ ->
+            onComplete()
+        }
+    }
+
+    fun deleteAllMembersWithStatus(onComplete: (Boolean, String?) -> Unit = { _, _ -> }) {
         viewModelScope.launch {
-            // Очищаем все лица на сервере распознавания
-            try {
-                FaceRecognitionApi.clearAll()
-                Log.d("FamilyViewModel", "Все лица удалены с сервера")
-            } catch (e: Exception) {
-                Log.w("FamilyViewModel", "Не удалось очистить сервер: ${e.message}")
+            // Очищаем лица на сервере для текущего устройства
+            val deviceId = UniqueIdHelper.getDeviceId(getApplication())
+            val clearServerResult = FaceRecognitionApi.clearAll(deviceId)
+            val serverCleared = clearServerResult.isSuccess
+            val serverError = clearServerResult.exceptionOrNull()?.message
+            if (clearServerResult.isSuccess) {
+                Log.d("FamilyViewModel", "Все лица удалены с сервера для device_id=$deviceId")
+            } else {
+                val errorMessage = serverError ?: "unknown error"
+                Log.w("FamilyViewModel", "Не удалось очистить сервер для device_id=$deviceId: $errorMessage")
             }
             // Удаляем из локальной базы
             repository.deleteAllMembers()
-            onComplete()
+            onComplete(serverCleared, serverError)
         }
     }
     

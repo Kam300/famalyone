@@ -1,15 +1,10 @@
 package com.example.familyone.ui
 
-import android.Manifest
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.familyone.R
 import com.example.familyone.api.BackupApi
@@ -19,7 +14,6 @@ import com.example.familyone.databinding.ActivityBackupBinding
 import com.example.familyone.utils.ApiServerConfig
 import com.example.familyone.utils.BackupArchiveBuildResult
 import com.example.familyone.utils.BackupArchiveManager
-import com.example.familyone.utils.BackupManager
 import com.example.familyone.utils.FaceSyncManager
 import com.example.familyone.utils.GoogleAuthManager
 import com.example.familyone.utils.UniqueIdHelper
@@ -52,22 +46,6 @@ class BackupActivity : AppCompatActivity() {
         )
     }
 
-    private val importFileLauncher = registerForActivityResult(
-        ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let { importFromFile(it) }
-    }
-
-    private val storagePermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            exportToLocalFile()
-        } else {
-            toast("Требуется разрешение для сохранения файла")
-        }
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityBackupBinding.inflate(layoutInflater)
@@ -95,11 +73,7 @@ class BackupActivity : AppCompatActivity() {
         }
 
         binding.btnLocalExport.setOnClickListener {
-            checkStoragePermissionAndExport()
-        }
-
-        binding.btnLocalImport.setOnClickListener {
-            showImportOptionsDialog()
+            startActivity(Intent(this, ExportActivity::class.java))
         }
 
         binding.btnGoogleSignIn.setOnClickListener {
@@ -189,100 +163,6 @@ class BackupActivity : AppCompatActivity() {
         binding.tvDriveStatus.setTextColor(getColor(R.color.green_accent))
         binding.btnDriveRestore.isEnabled = true
         binding.btnDriveDelete.isEnabled = true
-    }
-
-    private fun checkStoragePermissionAndExport() {
-        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
-            if (ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.WRITE_EXTERNAL_STORAGE
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                storagePermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                return
-            }
-        }
-        exportToLocalFile()
-    }
-
-    private fun exportToLocalFile() {
-        binding.progressLocal.visibility = View.VISIBLE
-
-        lifecycleScope.launch {
-            val result = BackupManager.exportToLocalFile(this@BackupActivity)
-
-            binding.progressLocal.visibility = View.GONE
-
-            result.fold(
-                onSuccess = { path ->
-                    MaterialAlertDialogBuilder(this@BackupActivity)
-                        .setTitle("Экспорт завершен")
-                        .setMessage("Файл сохранен:\n$path")
-                        .setPositiveButton("OK", null)
-                        .setNeutralButton("Поделиться") { _, _ ->
-                            shareBackupFile(path)
-                        }
-                        .show()
-                },
-                onFailure = { error ->
-                    toast("Ошибка: ${error.message}")
-                }
-            )
-        }
-    }
-
-    private fun shareBackupFile(path: String) {
-        try {
-            val file = File(path)
-            val uri = androidx.core.content.FileProvider.getUriForFile(
-                this,
-                "${packageName}.fileprovider",
-                file
-            )
-
-            val intent = Intent(Intent.ACTION_SEND).apply {
-                type = "application/json"
-                putExtra(Intent.EXTRA_STREAM, uri)
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-            startActivity(Intent.createChooser(intent, "Поделиться backup"))
-        } catch (e: Exception) {
-            toast("Ошибка: ${e.message}")
-        }
-    }
-
-    private fun showImportOptionsDialog() {
-        MaterialAlertDialogBuilder(this)
-            .setTitle("Импорт данных")
-            .setMessage("Существующие данные будут заменены. Продолжить?")
-            .setPositiveButton("Выбрать файл") { _, _ ->
-                importFileLauncher.launch("application/json")
-            }
-            .setNegativeButton("Отмена", null)
-            .show()
-    }
-
-    private fun importFromFile(uri: Uri) {
-        binding.progressLocal.visibility = View.VISIBLE
-
-        lifecycleScope.launch {
-            val result = BackupManager.importFromLocalFile(
-                this@BackupActivity,
-                uri,
-                clearExisting = true
-            )
-
-            binding.progressLocal.visibility = View.GONE
-
-            result.fold(
-                onSuccess = { count ->
-                    toast("Импортировано: $count записей")
-                },
-                onFailure = { error ->
-                    toast("Ошибка: ${error.message}")
-                }
-            )
-        }
     }
 
     private fun refreshRemoteMeta() {

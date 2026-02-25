@@ -8,6 +8,7 @@ import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.biometric.BiometricManager
+import androidx.lifecycle.ViewModelProvider
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
@@ -18,6 +19,7 @@ import com.example.familyone.utils.ApiServerConfig
 import com.example.familyone.utils.BiometricHelper
 import com.example.familyone.utils.ThemePreferences
 import com.example.familyone.utils.toast
+import com.example.familyone.viewmodel.FamilyViewModel
 import com.example.familyone.workers.NotificationWorker
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
@@ -25,6 +27,7 @@ import java.util.concurrent.TimeUnit
 class SettingsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivitySettingsBinding
+    private lateinit var viewModel: FamilyViewModel
     private lateinit var themePrefs: ThemePreferences
     private lateinit var notificationPrefs: android.content.SharedPreferences
 
@@ -33,6 +36,7 @@ class SettingsActivity : AppCompatActivity() {
         binding = ActivitySettingsBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        viewModel = ViewModelProvider(this)[FamilyViewModel::class.java]
         themePrefs = ThemePreferences(this)
         notificationPrefs = getSharedPreferences("app_settings", Context.MODE_PRIVATE)
 
@@ -69,7 +73,7 @@ class SettingsActivity : AppCompatActivity() {
                         negativeButtonText = getString(R.string.biometric_cancel),
                         onSuccess = {
                             BiometricHelper.setEnabled(this, true)
-                            toast("✓ Биометрическая защита включена")
+                            toast("Биометрическая защита включена")
                         },
                         onError = { error ->
                             binding.switchBiometric.isChecked = false
@@ -109,6 +113,10 @@ class SettingsActivity : AppCompatActivity() {
             startActivity(Intent(this, BackupActivity::class.java))
         }
 
+        binding.btnDeleteAllData.setOnClickListener {
+            showDeleteAllDataConfirmation()
+        }
+
         val savedServerUrl = ApiServerConfig.readUnifiedServerUrl(notificationPrefs)
         binding.etFaceServerUrl.setText(savedServerUrl)
         binding.etPdfServerUrl.setText(savedServerUrl)
@@ -125,7 +133,7 @@ class SettingsActivity : AppCompatActivity() {
             binding.etFaceServerUrl.setText(normalized)
             binding.etPdfServerUrl.setText(normalized)
             FaceRecognitionApi.setServerUrl(normalized)
-            toast("✓ URL сервера сохранен (Face + PDF)")
+            toast("URL сервера сохранен (Face + PDF)")
         }
 
         binding.btnTestFaceServer.setOnClickListener {
@@ -144,7 +152,7 @@ class SettingsActivity : AppCompatActivity() {
             binding.etFaceServerUrl.setText(normalized)
             binding.etPdfServerUrl.setText(normalized)
             FaceRecognitionApi.setServerUrl(normalized)
-            toast("✓ URL сервера сохранен (Face + PDF)")
+            toast("URL сервера сохранен (Face + PDF)")
         }
     }
 
@@ -156,7 +164,7 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         binding.tvFaceServerStatus.visibility = View.VISIBLE
-        binding.tvFaceServerStatus.text = "🔄 Проверка подключения..."
+        binding.tvFaceServerStatus.text = "Проверка подключения..."
         binding.tvFaceServerStatus.setTextColor(getColor(R.color.text_secondary_light))
 
         FaceRecognitionApi.setServerUrl(url)
@@ -165,7 +173,7 @@ class SettingsActivity : AppCompatActivity() {
             val isConnected = FaceRecognitionApi.checkHealth()
 
             if (isConnected) {
-                binding.tvFaceServerStatus.text = "✓ Сервер доступен!"
+                binding.tvFaceServerStatus.text = "Сервер доступен"
                 binding.tvFaceServerStatus.setTextColor(getColor(R.color.green_accent))
 
                 ApiServerConfig.writeUnifiedServerUrl(notificationPrefs, url)
@@ -173,8 +181,35 @@ class SettingsActivity : AppCompatActivity() {
                 binding.etFaceServerUrl.setText(normalized)
                 binding.etPdfServerUrl.setText(normalized)
             } else {
-                binding.tvFaceServerStatus.text = "✗ Сервер недоступен. Проверьте URL и сеть"
+                binding.tvFaceServerStatus.text = "Сервер недоступен. Проверьте URL и сеть"
                 binding.tvFaceServerStatus.setTextColor(getColor(R.color.red_button))
+            }
+        }
+    }
+
+    private fun showDeleteAllDataConfirmation() {
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setTitle("Удалить все данные?")
+            .setMessage("Будут удалены все члены семьи и фото в приложении, а также лица на сервере для этого устройства.")
+            .setPositiveButton("Удалить") { _, _ ->
+                clearAllData()
+            }
+            .setNegativeButton(getString(R.string.cancel), null)
+            .show()
+    }
+
+    private fun clearAllData() {
+        binding.btnDeleteAllData.isEnabled = false
+        binding.btnDeleteAllData.text = "Удаление..."
+        viewModel.deleteAllMembersWithStatus { serverCleared, serverError ->
+            runOnUiThread {
+                binding.btnDeleteAllData.isEnabled = true
+                binding.btnDeleteAllData.text = "Удалить все данные"
+                if (serverCleared) {
+                    toast("Данные очищены")
+                } else {
+                    toast("Локальные данные очищены, но сервер не очищен: ${serverError ?: "неизвестная ошибка"}")
+                }
             }
         }
     }
