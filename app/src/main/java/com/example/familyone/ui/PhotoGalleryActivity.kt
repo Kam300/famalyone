@@ -713,7 +713,7 @@ class PhotoGalleryActivity : AppCompatActivity() {
         
         val input = android.widget.EditText(this)
         input.setText(currentUrl)
-        input.hint = "https://totalcode.indevs.in/api"
+        input.hint = "https://totalcode.online/api"
         
         MaterialAlertDialogBuilder(this)
             .setTitle("Настройки сервера")
@@ -730,7 +730,7 @@ class PhotoGalleryActivity : AppCompatActivity() {
             }
             .setNegativeButton("Отмена", null)
             .setNeutralButton("По умолчанию") { _, _ ->
-                val defaultUrl = "https://totalcode.indevs.in/api"
+                val defaultUrl = com.example.familyone.utils.ApiServerConfig.DEFAULT_BASE_URL
                 com.example.familyone.utils.ApiServerConfig.writeUnifiedServerUrl(prefs, defaultUrl)
                 FaceRecognitionApi.setServerUrl(defaultUrl)
                 toast("Установлен URL по умолчанию")

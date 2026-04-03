@@ -7,14 +7,14 @@ class ApiServerConfigTest {
 
     @Test
     fun normalize_addsApiForDomainWithoutPath() {
-        val actual = ApiServerConfig.normalizeBaseUrl("https://totalcode.indevs.in")
-        assertEquals("https://totalcode.indevs.in/api", actual)
+        val actual = ApiServerConfig.normalizeBaseUrl("https://totalcode.online")
+        assertEquals("https://totalcode.online/api", actual)
     }
 
     @Test
     fun normalize_keepsApiWhenAlreadyPresent() {
-        val actual = ApiServerConfig.normalizeBaseUrl("https://totalcode.indevs.in/api")
-        assertEquals("https://totalcode.indevs.in/api", actual)
+        val actual = ApiServerConfig.normalizeBaseUrl("https://totalcode.online/api")
+        assertEquals("https://totalcode.online/api", actual)
     }
 
     @Test

@@ -68,7 +68,7 @@ object BackupApi {
     suspend fun getMeta(idToken: String): Result<BackupRemoteMeta> = withContext(Dispatchers.IO) {
         try {
             val response = executeWithRouteFallback(
-                endpoint = "backup/meta",
+                endpoint = "v2/backup/meta",
                 method = "GET",
                 idToken = idToken
             )
@@ -89,7 +89,7 @@ object BackupApi {
             }
 
             val response = executeUploadWithRouteFallback(
-                endpoint = "backup/upload",
+                endpoint = "v2/backup/upload",
                 idToken = idToken,
                 archiveFile = archiveFile
             )
@@ -110,7 +110,7 @@ object BackupApi {
 
             for ((index, baseUrl) in baseCandidates.withIndex()) {
                 val candidateType = if (index == 0) "primary" else "legacy"
-                val url = "$baseUrl/backup/download"
+                val url = "$baseUrl/v2/backup/download"
                 val request = Request.Builder()
                     .url(url)
                     .get()
@@ -158,7 +158,7 @@ object BackupApi {
     suspend fun deleteBackup(idToken: String): Result<Boolean> = withContext(Dispatchers.IO) {
         try {
             val response = executeWithRouteFallback(
-                endpoint = "backup",
+                endpoint = "v2/backup",
                 method = "DELETE",
                 idToken = idToken
             )

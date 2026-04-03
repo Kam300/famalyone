@@ -84,6 +84,25 @@
             android:name=".ui.BackupActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".ui.YandexAuthCallbackActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@style/Theme.FamilyOne">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:scheme="familyone"
+                    android:host="auth"
+                    android:path="/yandex/callback" />
+            </intent-filter>
+        </activity>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

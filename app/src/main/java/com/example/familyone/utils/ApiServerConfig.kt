@@ -7,7 +7,7 @@ import java.net.URI
 
 object ApiServerConfig {
 
-    const val DEFAULT_BASE_URL = "https://totalcode.indevs.in/api"
+    const val DEFAULT_BASE_URL = "https://totalcode.online/api"
 
     private const val KEY_SERVER_URL = "server_url"
     private const val KEY_FACE_SERVER_URL = "face_server_url"

@@ -346,7 +346,7 @@
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="URL сервера (например: https://totalcode.indevs.in/api)"
+                    android:hint="URL сервера (например: https://totalcode.online/api)"
                     style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                     app:boxCornerRadiusTopStart="12dp"
                     app:boxCornerRadiusTopEnd="12dp"

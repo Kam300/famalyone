@@ -1,8 +1,8 @@
 <resources>
-    <string name="app_name">Семейное Древо</string>
+    <string name="app_name">Семейное древо</string>
     
     <!-- Main Menu -->
-    <string name="main_title">Семейное Древо</string>
+    <string name="main_title">Семейное древо — FamilyOne</string>
     <string name="add_member">Добавить Члена Семьи</string>
     <string name="view_list">Посмотреть Список</string>
     <string name="family_tree">Древо семьи</string>
@@ -70,7 +70,7 @@
     <!-- About -->
     <string name="about_title">О приложении</string>
     <string name="app_description">Это приложение позволяет вам создавать и управлять своим семейным деревом.</string>
-    <string name="version">Версия: 1.4.0</string>
+    <string name="version">Версия: 1.5.1</string>
     <string name="check_updates">Проверить обновления</string>
     <string name="telegram">Телеграмм Канал</string>
     <string name="subscribe">Подписаться</string>

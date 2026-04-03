@@ -72,7 +72,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:text="JSON/CSV/PDF и импорт JSON доступны на экране «Экспорт данных»."
+                    android:text="JSON, CSV, PDF и импорт JSON доступны на экране экспорта."
                     android:textColor="@color/text_secondary_light"
                     android:textSize="13sp" />
 
@@ -82,7 +82,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
                     android:layout_marginTop="16dp"
-                    android:text="Открыть Экспорт данных"
+                    android:text="Открыть экспорт данных"
                     android:textSize="15sp"
                     app:icon="@drawable/ic_export"
                     app:iconGravity="start"
@@ -107,7 +107,7 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Серверный backup (Google OAuth)"
+                    android:text="Серверный backup FamilyOne"
                     android:textColor="@color/text_primary_light"
                     android:textSize="16sp"
                     android:textStyle="bold" />
@@ -116,139 +116,171 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:text="Единый backend для Android и Web"
+                    android:text="Резервная копия хранится на вашем сервере и может быть связана с Яндекс ID."
                     android:textColor="@color/text_secondary_light"
                     android:textSize="13sp" />
 
-                <ProgressBar
-                    android:id="@+id/progressDrive"
-                    android:layout_width="wrap_content"
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_gravity="center_horizontal"
                     android:layout_marginTop="12dp"
-                    android:visibility="gone" />
+                    app:cardBackgroundColor="@color/bg_section"
+                    app:cardCornerRadius="14dp"
+                    app:cardElevation="0dp">
 
-                <LinearLayout
-                    android:id="@+id/layoutGoogleSignedOut"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:orientation="vertical"
-                    android:visibility="visible">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Войдите через Google, чтобы включить защищенный облачный backup."
-                        android:textColor="@color/text_secondary_light"
-                        android:textSize="13sp" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnGoogleSignIn"
-                        style="@style/PurpleButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="56dp"
-                        android:layout_marginTop="14dp"
-                        android:text="Войти через Google"
-                        android:textSize="15sp"
-                        app:icon="@drawable/ic_google"
-                        app:iconGravity="start"
-                        app:iconSize="20dp"
-                        app:cornerRadius="16dp" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:id="@+id/layoutGoogleSignedIn"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:orientation="vertical"
-                    android:visibility="gone">
-
-                    <TextView
-                        android:id="@+id/tvGoogleEmail"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textColor="@color/green_accent"
-                        android:textSize="14sp"
-                        android:textStyle="bold" />
-
-                    <com.google.android.material.card.MaterialCardView
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
-                        app:cardBackgroundColor="@color/bg_section"
-                        app:cardCornerRadius="14dp"
-                        app:cardElevation="0dp">
+                        android:orientation="vertical"
+                        android:padding="14dp">
 
                         <TextView
-                            android:id="@+id/tvDriveStatus"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:padding="14dp"
-                            android:text="Нет данных о backup"
+                            android:text="Переносимая учётная запись"
+                            android:textColor="@color/text_primary_light"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvAuthStatus"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="Проверяем статус Яндекс ID..."
                             android:textColor="@color/text_secondary_light"
-                            android:textSize="14sp" />
-                    </com.google.android.material.card.MaterialCardView>
+                            android:textSize="13sp" />
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnDriveRefresh"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="52dp"
-                        android:layout_marginTop="12dp"
-                        android:text="Обновить статус"
-                        android:textColor="@color/purple_button"
-                        android:textSize="14sp"
-                        app:strokeColor="@color/purple_button"
-                        app:strokeWidth="2dp"
-                        app:cornerRadius="14dp" />
+                        <ProgressBar
+                            android:id="@+id/progressAuth"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center_horizontal"
+                            android:layout_marginTop="12dp"
+                            android:visibility="gone" />
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnDriveBackup"
-                        style="@style/PurpleButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="56dp"
-                        android:layout_marginTop="10dp"
-                        android:text="Создать и загрузить backup"
-                        android:textSize="15sp"
-                        app:cornerRadius="16dp" />
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnYandexConnect"
+                            style="@style/PurpleButton"
+                            android:layout_width="match_parent"
+                            android:layout_height="56dp"
+                            android:layout_marginTop="12dp"
+                            android:text="Подключить Яндекс ID"
+                            android:textSize="15sp"
+                            app:cornerRadius="16dp" />
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnDriveRestore"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="52dp"
-                        android:layout_marginTop="10dp"
-                        android:text="Восстановить из облака"
-                        android:textColor="@color/purple_button"
-                        android:textSize="14sp"
-                        app:strokeColor="@color/purple_button"
-                        app:strokeWidth="2dp"
-                        app:cornerRadius="14dp" />
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnAuthRefresh"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="match_parent"
+                            android:layout_height="52dp"
+                            android:layout_marginTop="10dp"
+                            android:text="Обновить статус аккаунта"
+                            android:textColor="@color/purple_button"
+                            android:textSize="14sp"
+                            app:strokeColor="@color/purple_button"
+                            app:strokeWidth="2dp"
+                            app:cornerRadius="14dp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnDriveDelete"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="52dp"
-                        android:layout_marginTop="10dp"
-                        android:text="Удалить облачный backup"
-                        android:textColor="@color/purple_button"
-                        android:textSize="14sp"
-                        app:strokeColor="@color/purple_button"
-                        app:strokeWidth="2dp"
-                        app:cornerRadius="14dp" />
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    app:cardBackgroundColor="@color/bg_section"
+                    app:cardCornerRadius="14dp"
+                    app:cardElevation="0dp">
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnGoogleSignOut"
-                        style="@style/Widget.Material3.Button.TextButton"
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="Выйти"
-                        android:textColor="@color/purple_button" />
-                </LinearLayout>
+                        android:orientation="vertical"
+                        android:padding="14dp">
+
+                        <TextView
+                            android:id="@+id/tvServerInfo"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/text_secondary_light"
+                            android:textSize="13sp" />
+
+                        <ProgressBar
+                            android:id="@+id/progressDrive"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center_horizontal"
+                            android:layout_marginTop="12dp"
+                            android:visibility="gone" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    app:cardBackgroundColor="@color/bg_section"
+                    app:cardCornerRadius="14dp"
+                    app:cardElevation="0dp">
+
+                    <TextView
+                        android:id="@+id/tvDriveStatus"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="14dp"
+                        android:text="Проверяем наличие резервной копии на сервере..."
+                        android:textColor="@color/text_secondary_light"
+                        android:textSize="14sp" />
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnDriveRefresh"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="12dp"
+                    android:text="Обновить статус backup"
+                    android:textColor="@color/purple_button"
+                    android:textSize="14sp"
+                    app:strokeColor="@color/purple_button"
+                    app:strokeWidth="2dp"
+                    app:cornerRadius="14dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnDriveBackup"
+                    style="@style/PurpleButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:layout_marginTop="10dp"
+                    android:text="Создать и загрузить backup"
+                    android:textSize="15sp"
+                    app:cornerRadius="16dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnDriveRestore"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="10dp"
+                    android:text="Восстановить с сервера"
+                    android:textColor="@color/purple_button"
+                    android:textSize="14sp"
+                    app:strokeColor="@color/purple_button"
+                    app:strokeWidth="2dp"
+                    app:cornerRadius="14dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnDriveDelete"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="10dp"
+                    android:text="Удалить server backup"
+                    android:textColor="@color/purple_button"
+                    android:textSize="14sp"
+                    app:strokeColor="@color/purple_button"
+                    app:strokeWidth="2dp"
+                    app:cornerRadius="14dp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
