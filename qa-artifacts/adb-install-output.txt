@@ -1,0 +1,16 @@
+Performing Streamed Install
+adb.exe : adb.exe: failed to install C:\Users\RobotComp.ru\Documents\vs_ptoject\famalyone\app\build\outputs\apk\debug\a
+pp-debug.apk: 
+At line:6 char:18
++ $installOutput = & $adb -s emulator-5554 install -r $apk 2>&1 | Out-S ...
++                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (adb.exe: failed...app-debug.apk: :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Exception occurred while executing 'install':
+android.os.ParcelableException: java.io.IOException: Requested internal only, but not enough space
+	at android.util.ExceptionUtils.wrap(ExceptionUtils.java:34)
+	at com.android.server.pm.PackageInstallerService.createSession(PackageInstallerService.java:671)
+	at com.android.server.pm.PackageManagerShellCommand.doCreateSession(PackageManagerShellCommand.java:3978)
+	at com.android.server.pm.PackageManagerShellCommand.doRunInstall(PackageManagerShellCommand.java:1
+

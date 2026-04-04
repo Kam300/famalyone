@@ -50,7 +50,7 @@ class BackupActivity : AppCompatActivity() {
         AuthApi.setDeviceId(deviceId)
 
         binding.tvServerInfo.text =
-            "Сервер: $serverUrl\nУстройство: $deviceId\nРежим: server backup FamilyOne"
+            "Сервер: $serverUrl\nУстройство: $deviceId\nРежим: серверная резервная копия"
         binding.tvDriveStatus.text = "Проверяем наличие резервной копии на сервере..."
         binding.tvDriveStatus.setTextColor(getColor(R.color.text_secondary_light))
 
@@ -144,7 +144,7 @@ class BackupActivity : AppCompatActivity() {
     private fun refreshAuthState() {
         lifecycleScope.launch {
             setAuthBusy(true)
-            val result = AuthApi.bootstrap(displayName = "FamilyOne Android")
+            val result = AuthApi.bootstrap(displayName = "Android-клиент Семейного древа")
             setAuthBusy(false)
 
             result.fold(
@@ -173,7 +173,7 @@ class BackupActivity : AppCompatActivity() {
 
         if (!snapshot.yandexConfigured) {
             binding.tvAuthStatus.text =
-                "Яндекс ID ещё не настроен на сервере FamilyOne.\nПока доступна только локальная сессия этого устройства."
+                "Яндекс ID ещё не настроен на сервере приложения «Семейное древо».\nПока доступна только локальная сессия этого устройства."
             binding.tvAuthStatus.setTextColor(getColor(R.color.text_secondary_light))
             binding.btnYandexConnect.text = "Яндекс ID недоступен"
             binding.btnYandexConnect.isEnabled = false
@@ -181,7 +181,7 @@ class BackupActivity : AppCompatActivity() {
         }
 
         if (snapshot.yandexConnected) {
-            val name = snapshot.yandexDisplayName ?: snapshot.displayName.ifBlank { "Пользователь FamilyOne" }
+            val name = snapshot.yandexDisplayName ?: snapshot.displayName.ifBlank { "Пользователь Семейного древа" }
             val email = snapshot.yandexEmail ?: snapshot.email ?: "email не указан"
             binding.tvAuthStatus.text =
                 "Яндекс ID подключен\n" +

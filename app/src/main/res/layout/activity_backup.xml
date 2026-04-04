@@ -107,7 +107,7 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Серверный backup FamilyOne"
+                    android:text="Серверная резервная копия"
                     android:textColor="@color/text_primary_light"
                     android:textSize="16sp"
                     android:textStyle="bold" />
