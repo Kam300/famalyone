@@ -37,7 +37,7 @@ class OnboardingAdapter(
     private val pages = listOf(
         OnboardingPage(
             title = "Добро пожаловать!",
-            description = "FamilyOne - это современное приложение для создания и управления вашим семейным древом",
+            description = "Семейное древо — это современное приложение для создания и управления вашим семейным древом",
             iconRes = R.drawable.ic_family_tree
         ),
         OnboardingPage(
